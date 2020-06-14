@@ -1,3 +1,5 @@
+local __author__ = "LeoDeveloper"
+local __verison__ = "1.0.1"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -126,7 +128,7 @@ plist = {
       return text
     end,
     Combobox = function(varname, name, ...)
-      local combobox = gui.Slider(GUI_WINDOW_SET, "settings." .. tostring(varname), name, ...)
+      local combobox = gui.Combobox(GUI_WINDOW_SET, "settings." .. tostring(varname), name, ...)
       guisettings[varname] = {
         set = function(value_)
           return combobox:SetValue(value_)
@@ -233,12 +235,84 @@ callbacks.Register("CreateMove", "playerlist.plugins.LBY_Override", function(cmd
       end
       local set = plist.GetByIndex(player:GetIndex())
       if set.get("lby_override.toggle") then
-        player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles")(set.get("lby_override.value") + 180)) % 360 - 180)
+        player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles").y + set.get("lby_override.value") + 180) % 360 - 180)
       end
       _continue_0 = true
     until true
     if not _continue_0 then
       break
+    end
+  end
+end)
+local priority_targetted_entity = nil
+local priority_targetting_priority = false
+callbacks.Register("AimbotTarget", "playerlist.plugins.Priority.AimbotTarget", function(entity)
+  if priority_targetted_entity and entity:GetIndex() ~= priority_targetted_entity:GetIndex() then
+    if priority_targetting_priority then
+      gui.SetValue("rbot.aim.target.lock", false)
+    end
+    priority_targetted_entity = entity
+    priority_targetting_priority = false
+  elseif priority_targetting_priority then
+    return gui.SetValue("rbot.aim.target.fov", 180)
+  end
+end)
+plist.gui.Combobox("priority", "Priority", "Normal", "Friendly", "Priority")
+local priority_lock_fov = 3
+local priority_friendly_affected = { }
+callbacks.Register("CreateMove", "playerlist.plugins.Priority.CreateMove", function(cmd)
+  local localplayer = entities.GetLocalPlayer()
+  local _list_0 = entities.FindByClass("CCSPlayer")
+  for _index_0 = 1, #_list_0 do
+    local _continue_0 = false
+    repeat
+      local player = _list_0[_index_0]
+      if not player:IsAlive() then
+        _continue_0 = true
+        break
+      end
+      local set = plist.GetByIndex(player:GetIndex())
+      local uid = client.GetPlayerInfo(player:GetIndex())["UserID"]
+      if set.get("priority") == 0 and priority_friendly_affected[uid] then
+        player:SetProp("m_iTeamNum", player:GetProp("m_iPendingTeamNum"))
+        priority_friendly_affected[uid] = nil
+      elseif set.get("priority") == 1 then
+        player:SetProp("m_iTeamNum", localplayer:GetTeamNumber())
+        priority_friendly_affected[uid] = true
+      elseif set.get("priority") == 2 then
+        if player:GetProp("m_iPendingTeamNum") == localplayer:GetTeamNumber() then
+          player:SetProp("m_iTeamNum", (localplayer:GetTeamNumber() - 1) % 2 + 2)
+          priority_friendly_affected[uid] = true
+        else
+          if priority_friendly_affected[uid] then
+            player:SetProp("m_iTeamNum", player:GetProp("m_iPendingTeamNum"))
+            priority_friendly_affected[uid] = nil
+          end
+          if not priority_targetting_priority and player:GetTeamNumber() ~= localplayer:GetTeamNumber() then
+            local lp_pos = localplayer:GetAbsOrigin() + localplayer:GetPropVector("localdata", "m_vecViewOffset[0]")
+            local t_pos = player:GetHitboxPosition(5)
+            engine.SetViewAngles((t_pos - lp_pos):Angles())
+            gui.SetValue("rbot.aim.target.fov", priority_lock_fov)
+            gui.SetValue("rbot.aim.target.lock", true)
+            priority_targetted_entity = player
+            priority_targetting_priority = true
+          end
+        end
+      end
+      _continue_0 = true
+    until true
+    if not _continue_0 then
+      break
+    end
+  end
+end)
+callbacks.Register("FireGameEvent", "playerlist.plugins.Priority.FireGameEvent", function(event)
+  if event:GetName() == "player_death" and priority_targetting_priority then
+    if client.GetPlayerIndexByUserID(event:GetInt("userid")) == priority_targetted_entity:GetIndex() then
+      priority_targetting_priority = false
+      priority_targetted_entity = nil
+      gui.SetValue("rbot.aim.target.fov", 180)
+      return gui.SetValue("rbot.aim.target.lock", false)
     end
   end
 end)

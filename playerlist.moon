@@ -1,4 +1,7 @@
 
+__author__ = "LeoDeveloper"
+__verison__ = "1.0.1"
+
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
 randomname = ""
@@ -86,7 +89,7 @@ export plist = {
             text
                 
         Combobox: ( varname, name, ... ) ->
-            combobox = gui.Slider GUI_WINDOW_SET, "settings.#{varname}", name, ...
+            combobox = gui.Combobox GUI_WINDOW_SET, "settings.#{varname}", name, ...
             guisettings[ varname ] = {
                 set: (value_) -> combobox\SetValue value_
                 get: -> combobox\GetValue!
@@ -146,7 +149,7 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             playersettings[ uid ].info.nickname = player\GetName!
             GUI_WINDOW_PLIST_LIST\SetOptions unpack [v.info.nickname for _, v in pairs playersettings]
 
--- example extension
+-- lby "resolver" plugin
 plist.gui.Checkbox "lby_override.toggle", "LBY Override", false
 plist.gui.Slider "lby_override.value", "LBY Override Value", 0, -58, 58
 
@@ -160,4 +163,75 @@ callbacks.Register "CreateMove", "playerlist.plugins.LBY_Override", (cmd) ->
         if set.get "lby_override.toggle" 
             player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"lby_override.value" + 180) % 360 - 180
 
+-- player priority plugin
+priority_targetted_entity = nil
+priority_targetting_priority = false
+callbacks.Register "AimbotTarget", "playerlist.plugins.Priority.AimbotTarget", (entity) ->
+	if priority_targetted_entity and entity\GetIndex! != priority_targetted_entity\GetIndex!
+		if priority_targetting_priority
+			-- reset lock cuz we're attacking someone else
+			--print("switchting to something different than priority target (lock off)", priority_targetted_entity)
+			gui.SetValue "rbot.aim.target.lock", false
+		priority_targetted_entity = entity
+		priority_targetting_priority = false
+	elseif priority_targetting_priority
+		-- reset fov because we're already locking
+		--print("targetting priority target (fov off)", priority_targetted_entity)
+		gui.SetValue "rbot.aim.target.fov", 180
+
+plist.gui.Combobox "priority", "Priority", "Normal", "Friendly", "Priority"
+
+priority_lock_fov = 3
+priority_friendly_affected = {}
+callbacks.Register "CreateMove", "playerlist.plugins.Priority.CreateMove", (cmd) ->
+    localplayer = entities.GetLocalPlayer!
+    for player in *entities.FindByClass"CCSPlayer"
+        if not player\IsAlive!
+            continue
+			
+		set = plist.GetByIndex player\GetIndex!
+        uid = client.GetPlayerInfo( player\GetIndex! )[ "UserID" ]
+		if set.get"priority" == 0 and priority_friendly_affected[ uid ] -- reset team number
+			player\SetProp "m_iTeamNum",  player\GetProp "m_iPendingTeamNum" -- `m_iPendingTeamNum`, seems to work for resetting
+			priority_friendly_affected[ uid ] = nil
+		elseif set.get"priority" == 1 -- change team number to my team
+			player\SetProp "m_iTeamNum", localplayer\GetTeamNumber!
+			priority_friendly_affected[ uid ] = true
+		elseif set.get"priority" == 2
+			if player\GetProp"m_iPendingTeamNum" == localplayer\GetTeamNumber! -- in my team = make him enemy
+				player\SetProp "m_iTeamNum", (localplayer\GetTeamNumber!-1) % 2 + 2 -- this seems to work for getting enemy team number
+				priority_friendly_affected[ uid ] = true
+			else
+				if priority_friendly_affected[ uid ] -- reset team number
+					player\SetProp "m_iTeamNum",  player\GetProp "m_iPendingTeamNum" -- `m_iPendingTeamNum`, seems to work for resetting
+					priority_friendly_affected[ uid ] = nil
+				-- if we arent targetting anyone
+				if not priority_targetting_priority and player\GetTeamNumber! != localplayer\GetTeamNumber!
+					-- pasted code from Zarkos & converted to moonscript
+					
+					lp_pos = localplayer\GetAbsOrigin! + localplayer\GetPropVector "localdata", "m_vecViewOffset[0]"
+					t_pos = player\GetHitboxPosition 5
+
+					engine.SetViewAngles (t_pos - lp_pos)\Angles!
+					gui.SetValue "rbot.aim.target.fov", priority_lock_fov
+					gui.SetValue "rbot.aim.target.lock", true
+					priority_targetted_entity = player
+					priority_targetting_priority = true
+					
+					--print("priority targetting", player)
+
+callbacks.Register "FireGameEvent", "playerlist.plugins.Priority.FireGameEvent", (event) ->
+	-- we have to reset FOV and stuff after they die
+	if event\GetName! == "player_death" and priority_targetting_priority
+		if client.GetPlayerIndexByUserID( event\GetInt"userid" ) == priority_targetted_entity\GetIndex!
+			--print("priority target died", priority_targetted_entity)
+			
+			priority_targetting_priority = false
+			priority_targetted_entity = nil
+			gui.SetValue "rbot.aim.target.fov", 180
+			gui.SetValue "rbot.aim.target.lock", false
+			
+			
+
+-- removed by `build.py`, to prevent crashes
 return "__REMOVE_ME__"
