@@ -9,3 +9,7 @@
     - `Friendly` priority, doesn't attack the player with ragebot
     - `Priority` priority, prefers player over other enemies or attacks teammate.
 
+- Version 1.0.2 | 2020.06.14
+  - Fixed error in `SettingsWrapper.set`
+  - Added `Button` and `Editbox` to `plist.gui`
+  - Resetting names now on map change

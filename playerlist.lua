@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __verison__ = "1.0.1"
+local __verison__ = "1.0.2"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -38,7 +38,7 @@ setting_wrapper = function(settings)
   return {
     set = function(varname, value)
       settings.settings[varname] = value
-      if playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1] == value.info.uid then
+      if playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1] == settings.info.uid then
         return guisettings[varname].set(value)
       end
     end,
@@ -142,6 +142,27 @@ plist = {
         setting.settings[varname] = 0
       end
       return combobox
+    end,
+    Button = function(name, callback)
+      return gui.Button(GUI_WINDOW_SET, name, function()
+        return callback(playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1])
+      end)
+    end,
+    Editbox = function(varname, name)
+      local editbox = gui.Editbox(GUI_WINDOW_SET, varname, name)
+      guisettings[varname] = {
+        set = function(value_)
+          return editbox:SetValue(value_)
+        end,
+        get = function()
+          return editbox:GetValue()
+        end,
+        default = 0
+      }
+      for _, setting in pairs(playersettings) do
+        setting.settings[varname] = 0
+      end
+      return editbox
     end
   },
   GetByUserID = function(userid)
@@ -178,7 +199,14 @@ callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
     end
   end
 end)
+local last_map = nil
 callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd)
+  if engine.GetMapName() ~= last_map then
+    last_map = engine.GetMapName()
+    GUI_WINDOW_PLIST_LIST:SetOptions()
+    playersettings = { }
+    playerlist = { }
+  end
   local _list_0 = entities.FindByClass("CCSPlayer")
   for _index_0 = 1, #_list_0 do
     local player = _list_0[_index_0]

@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__verison__ = "1.0.1"
+__verison__ = "1.0.2"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -32,7 +32,7 @@ setting_wrapper = (settings) ->
         set: (varname, value) ->
             settings.settings[ varname ] = value
             -- if the player is currently selected, update it
-            if playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ] == value.info.uid
+            if playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ] == settings.info.uid
                 guisettings[ varname ].set value
         get: (varname) ->
             settings.settings[ varname ]
@@ -98,6 +98,21 @@ export plist = {
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = 0
             combobox
+        
+        Button: ( name, callback ) ->
+            gui.Button GUI_WINDOW_SET, name, -> callback playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ]
+
+        Editbox: ( varname, name ) ->
+            editbox = gui.Editbox GUI_WINDOW_SET, varname, name
+            guisettings[ varname ] = {
+                set: (value_) -> editbox\SetValue value_
+                get: -> editbox\GetValue!
+                default: 0
+            }
+            for _, setting in pairs playersettings
+                setting.settings[ varname ] = 0
+            editbox
+
     }
     GetByUserID: (userid) -> setting_wrapper playersettings[ userid ]
     GetByIndex: (index) ->
@@ -125,8 +140,14 @@ callbacks.Register "Draw", "playerlist.callbacks.Draw", ->
         for varname, wrap in pairs guisettings
             set[ varname ] = wrap.get!
 
-
+last_map = nil
 callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
+    if engine.GetMapName! != last_map -- different server / map
+        last_map = engine.GetMapName!
+        GUI_WINDOW_PLIST_LIST\SetOptions! -- reset displayed players
+        playersettings = {}
+        playerlist = {}
+
     for player in *entities.FindByClass"CCSPlayer"
         uid = client.GetPlayerInfo( player\GetIndex! )[ "UserID" ]
         if playersettings[ uid ] == nil -- never seen the player
