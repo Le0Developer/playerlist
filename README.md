@@ -73,3 +73,12 @@ callbacks.Register("FireGameEvent", function(Event)
   end
 end)
 ```
+
+## Credits
+
+This program includes source from:
+  - [PlayerList](https://aimware.net/forum/thread/136420) by [Zerdos](https://aimware.net/forum/user/119901) [GITHUB](https://github.com/zer420/Player-List) Affected code: Prioritizing players.
+  - [Per Player ESP](https://aimware.net/forum/thread/109067) by [Cheeseot](https://aimware.net/forum/user/215088) Affected code: Per Player ESP
+
+I'm also thanking:
+  - The amazing people from the unofficial AIMWARE discord server.

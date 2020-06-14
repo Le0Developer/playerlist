@@ -13,3 +13,11 @@
   - Fixed error in `SettingsWrapper.set`
   - Added `Button` and `Editbox` to `plist.gui`
   - Resetting names now on map change
+
+- Version 1.0.3 | 2020.06.14
+  - Added description for window toggler
+  - Added force baim/safepoint
+  - Added per player esp
+  - Removed team check for LBY Override
+  - Fixed multiple errors with empty userlists
+  - Fixed issue with visible userlist desyncing with the internal

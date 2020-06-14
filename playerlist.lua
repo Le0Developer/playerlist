@@ -1,12 +1,17 @@
 local __author__ = "LeoDeveloper"
-local __verison__ = "1.0.2"
+local __verison__ = "1.0.3"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
   randomname = randomname .. ("0123456789abcdef"):sub(rand, rand)
 end
 local MENU = gui.Reference("Menu")
-local GUI_ENABLE = gui.Checkbox(gui.Reference("Misc", "General", "Extra"), "playerlist.enable", "Player List", false)
+local GUI_ENABLE
+do
+  local _with_0 = gui.Checkbox(gui.Reference("Misc", "General", "Extra"), "playerlist.enable", "Player List", false)
+  _with_0:SetDescription("Show Player List Window.")
+  GUI_ENABLE = _with_0
+end
 local GUI_WINDOW_POS = {
   x = 100,
   y = 100,
@@ -38,7 +43,7 @@ setting_wrapper = function(settings)
   return {
     set = function(varname, value)
       settings.settings[varname] = value
-      if playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1] == settings.info.uid then
+      if #playerlist > 0 and playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1] == settings.info.uid then
         return guisettings[varname].set(value)
       end
     end,
@@ -145,7 +150,11 @@ plist = {
     end,
     Button = function(name, callback)
       return gui.Button(GUI_WINDOW_SET, name, function()
-        return callback(playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1])
+        if #playerlist > 0 then
+          return callback(playerlist[GUI_WINDOW_PLIST_LIST:GetValue() + 1])
+        else
+          return callback()
+        end
       end)
     end,
     Editbox = function(varname, name)
@@ -183,7 +192,7 @@ plist = {
 local selected_player = nil
 callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
   GUI_WINDOW:SetActive(GUI_ENABLE:GetValue() and MENU:IsActive())
-  if not GUI_WINDOW:IsActive() then
+  if not GUI_WINDOW:IsActive() or #playerlist == 0 then
     return 
   end
   if selected_player ~= GUI_WINDOW_PLIST_LIST:GetValue() then
@@ -228,8 +237,8 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
       GUI_WINDOW_PLIST_LIST:SetOptions(unpack((function()
         local _accum_0 = { }
         local _len_0 = 1
-        for _, v in pairs(playersettings) do
-          _accum_0[_len_0] = v.info.nickname
+        for _, v in ipairs(playerlist) do
+          _accum_0[_len_0] = playersettings[v].info.nickname
           _len_0 = _len_0 + 1
         end
         return _accum_0
@@ -239,8 +248,8 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
       GUI_WINDOW_PLIST_LIST:SetOptions(unpack((function()
         local _accum_0 = { }
         local _len_0 = 1
-        for _, v in pairs(playersettings) do
-          _accum_0[_len_0] = v.info.nickname
+        for _, v in ipairs(playerlist) do
+          _accum_0[_len_0] = playersettings[v].info.nickname
           _len_0 = _len_0 + 1
         end
         return _accum_0
@@ -257,7 +266,7 @@ callbacks.Register("CreateMove", "playerlist.plugins.LBY_Override", function(cmd
     local _continue_0 = false
     repeat
       local player = _list_0[_index_0]
-      if not player:IsAlive() or player:GetTeamNumber() == localplayer:GetTeamNumber() then
+      if not player:IsAlive() then
         _continue_0 = true
         break
       end
@@ -342,6 +351,153 @@ callbacks.Register("FireGameEvent", "playerlist.plugins.Priority.FireGameEvent",
       gui.SetValue("rbot.aim.target.fov", 180)
       return gui.SetValue("rbot.aim.target.lock", false)
     end
+  end
+end)
+plist.gui.Checkbox("force.baim", "Force BAIM", false)
+plist.gui.Checkbox("force.safepoint", "Force Safepoint", false)
+local fbsp_weapon_types = {
+  "asniper",
+  "hpistol",
+  "lmg",
+  "pistol",
+  "rifle",
+  "scout",
+  "shared",
+  "shotgun",
+  "smg",
+  "sniper",
+  "zeus"
+}
+local fbsp_cache_baim = {
+  applied = false
+}
+local fbsp_baim_apply
+fbsp_baim_apply = function()
+  if fbsp_cache_baim.applied then
+    print("[PLAYERLIST] WARNING: Force baim has already been applied.")
+  end
+  for _index_0 = 1, #fbsp_weapon_types do
+    local weapon = fbsp_weapon_types[_index_0]
+    if gui.GetValue("rbot.hitscan.mode." .. tostring(weapon) .. ".bodyaim") ~= 1 then
+      fbsp_cache_baim[weapon] = gui.GetValue("rbot.hitscan.mode." .. tostring(weapon) .. ".bodyaim")
+      gui.SetValue("rbot.hitscan.mode." .. tostring(weapon) .. ".bodyaim", 1)
+    end
+  end
+  fbsp_cache_baim.applied = true
+end
+local fbsp_baim_undo
+fbsp_baim_undo = function()
+  if not fbsp_cache_baim.applied then
+    print("[PLAYERLIST] WARNING: Force baim hasn't been applied.")
+  end
+  for weapon, value in pairs(fbsp_cache_baim) do
+    local _continue_0 = false
+    repeat
+      if weapon == "applied" then
+        _continue_0 = true
+        break
+      end
+      gui.SetValue("rbot.hitscan.mode." .. tostring(weapon) .. ".bodyaim", value)
+      _continue_0 = true
+    until true
+    if not _continue_0 then
+      break
+    end
+  end
+  fbsp_cache_baim = {
+    applied = false
+  }
+end
+local fbsp_cache_sp = {
+  applied = false
+}
+local fbsp_sp_regions = {
+  "delayshot",
+  "delayshotbody",
+  "delayshotlimbs"
+}
+local fbsp_sp_apply
+fbsp_sp_apply = function()
+  if fbsp_cache_sp.applied then
+    print("[PLAYERLIST] WARNING: Force safepoint has already been applied.")
+  end
+  for _index_0 = 1, #fbsp_weapon_types do
+    local weapon = fbsp_weapon_types[_index_0]
+    for _index_1 = 1, #fbsp_sp_regions do
+      local delayshot_region = fbsp_sp_regions[_index_1]
+      if gui.GetValue("rbot.hitscan.mode." .. tostring(weapon) .. "." .. tostring(delayshot_region)) ~= 1 then
+        fbsp_cache_sp[tostring(weapon) .. "." .. tostring(delayshot_region)] = gui.GetValue("rbot.hitscan.mode." .. tostring(weapon) .. "." .. tostring(delayshot_region))
+        gui.SetValue("rbot.hitscan.mode." .. tostring(weapon) .. "." .. tostring(delayshot_region), 1)
+      end
+    end
+  end
+  fbsp_cache_sp.applied = true
+end
+local fbsp_sp_undo
+fbsp_sp_undo = function()
+  if not fbsp_cache_sp.applied then
+    print("[PLAYERLIST] WARNING: Force safepoint hasn't been applied.")
+  end
+  for weapon, value in pairs(fbsp_cache_sp) do
+    local _continue_0 = false
+    repeat
+      if weapon == "applied" then
+        _continue_0 = true
+        break
+      end
+      gui.SetValue("rbot.hitscan.mode." .. tostring(weapon), value)
+      _continue_0 = true
+    until true
+    if not _continue_0 then
+      break
+    end
+  end
+  fbsp_cache_sp = {
+    applied = false
+  }
+end
+local fbsp_targetted_enemy = nil
+callbacks.Register("AimbotTarget", "playerlist.plugins.FBSP.AimbotTarget", function(entity)
+  if not entity:GetIndex() then
+    return 
+  end
+  fbsp_targetted_enemy = entity
+  local set = plist.GetByIndex(entity:GetIndex())
+  if set.get("force.baim") then
+    if not fbsp_cache_baim.applied then
+      fbsp_baim_apply()
+    end
+  elseif fbsp_cache_baim.applied then
+    fbsp_baim_undo()
+  end
+  if set.get("force.safepoint") then
+    if not fbsp_cache_sp.applied then
+      return fbsp_sp_apply()
+    end
+  elseif fbsp_cache_sp.applied then
+    return fbsp_sp_undo()
+  end
+end)
+callbacks.Register("FireGameEvent", "playerlist.plugins.FBSP.FireGameEvent", function(event)
+  if event:GetName() == "player_death" and fbsp_targetted_enemy and client.GetPlayerIndexByUserID(event:GetInt("userid")) == fbsp_targetted_enemy:GetIndex() then
+    fbsp_targetted_enemy = nil
+    if fbsp_cache_baim.applied then
+      fbsp_baim_undo()
+    end
+    if fbsp_cache_sp.applied then
+      return fbsp_sp_undo()
+    end
+  end
+end)
+plist.gui.Checkbox("esp", "ESP", false)
+callbacks.Register("DrawESP", "playerlist.plugins.PPE.DrawESP", function(builder)
+  local player = builder:GetEntity()
+  if not player:IsPlayer() then
+    return 
+  end
+  if plist.GetByIndex(player:GetIndex()).get("esp") then
+    draw.Color(0x80, 0x80, 0x80, 0xFF)
+    return draw.OutlinedRect(builder:GetRect())
   end
 end)
 

@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__verison__ = "1.0.2"
+__verison__ = "1.0.3"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -10,7 +10,8 @@ for i=1, 16
     randomname ..= ("0123456789abcdef")\sub rand, rand
 
 MENU = gui.Reference"Menu"
-GUI_ENABLE = gui.Checkbox gui.Reference( "Misc", "General", "Extra" ), "playerlist.enable", "Player List", false
+GUI_ENABLE = with gui.Checkbox gui.Reference( "Misc", "General", "Extra" ), "playerlist.enable", "Player List", false
+    \SetDescription "Show Player List Window."
 
 GUI_WINDOW_POS = { x: 100, y: 100, w: 400, h: 400 }
 LIST_WIDTH = GUI_WINDOW_POS.w / 2 - 8
@@ -32,7 +33,7 @@ setting_wrapper = (settings) ->
         set: (varname, value) ->
             settings.settings[ varname ] = value
             -- if the player is currently selected, update it
-            if playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ] == settings.info.uid
+            if #playerlist > 0 and playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ] == settings.info.uid
                 guisettings[ varname ].set value
         get: (varname) ->
             settings.settings[ varname ]
@@ -100,7 +101,11 @@ export plist = {
             combobox
         
         Button: ( name, callback ) ->
-            gui.Button GUI_WINDOW_SET, name, -> callback playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ]
+            gui.Button GUI_WINDOW_SET, name, ->
+                if #playerlist > 0
+                    callback playerlist[ GUI_WINDOW_PLIST_LIST\GetValue! + 1 ]
+                else
+                    callback!
 
         Editbox: ( varname, name ) ->
             editbox = gui.Editbox GUI_WINDOW_SET, varname, name
@@ -127,7 +132,7 @@ export plist = {
 selected_player = nil
 callbacks.Register "Draw", "playerlist.callbacks.Draw", ->
     GUI_WINDOW\SetActive GUI_ENABLE\GetValue! and MENU\IsActive!
-    if not GUI_WINDOW\IsActive! then return
+    if not GUI_WINDOW\IsActive! or #playerlist == 0 then return
     
     if selected_player != GUI_WINDOW_PLIST_LIST\GetValue!
         selected_player = GUI_WINDOW_PLIST_LIST\GetValue!
@@ -164,11 +169,11 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             for varname, wrap in pairs guisettings
                 set[ varname ] = wrap.default
 
-            GUI_WINDOW_PLIST_LIST\SetOptions unpack [v.info.nickname for _, v in pairs playersettings]
+            GUI_WINDOW_PLIST_LIST\SetOptions unpack [playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
         elseif playersettings[ uid ].info.nickname != player\GetName! -- changed name
             playersettings[ uid ].info.nickname = player\GetName!
-            GUI_WINDOW_PLIST_LIST\SetOptions unpack [v.info.nickname for _, v in pairs playersettings]
+            GUI_WINDOW_PLIST_LIST\SetOptions unpack [playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
 -- lby "resolver" plugin
 plist.gui.Checkbox "lby_override.toggle", "LBY Override", false
@@ -177,7 +182,7 @@ plist.gui.Slider "lby_override.value", "LBY Override Value", 0, -58, 58
 callbacks.Register "CreateMove", "playerlist.plugins.LBY_Override", (cmd) ->
     localplayer = entities.GetLocalPlayer!
     for player in *entities.FindByClass"CCSPlayer"
-        if not player\IsAlive! or player\GetTeamNumber! == localplayer\GetTeamNumber!
+        if not player\IsAlive!
             continue
         
         set = plist.GetByIndex player\GetIndex!
@@ -252,7 +257,90 @@ callbacks.Register "FireGameEvent", "playerlist.plugins.Priority.FireGameEvent",
 			gui.SetValue "rbot.aim.target.fov", 180
 			gui.SetValue "rbot.aim.target.lock", false
 			
-			
+-- Force Baim / SafePoint plugin (fbsp)
+plist.gui.Checkbox "force.baim", "Force BAIM", false
+plist.gui.Checkbox "force.safepoint", "Force Safepoint", false
 
--- removed by `build.py`, to prevent crashes
+-- setters and undoers
+fbsp_weapon_types = {"asniper", "hpistol", "lmg", "pistol", "rifle", "scout", "shared", "shotgun", "smg", "sniper", "zeus"}
+fbsp_cache_baim = { applied: false }
+fbsp_baim_apply = ->
+    if fbsp_cache_baim.applied
+        print( "[PLAYERLIST] WARNING: Force baim has already been applied." )
+    for weapon in *fbsp_weapon_types
+        if gui.GetValue"rbot.hitscan.mode.#{weapon}.bodyaim" != 1
+            fbsp_cache_baim[ weapon ] = gui.GetValue"rbot.hitscan.mode.#{weapon}.bodyaim"
+            gui.SetValue "rbot.hitscan.mode.#{weapon}.bodyaim", 1 -- priority
+    fbsp_cache_baim.applied = true
+fbsp_baim_undo = ->
+    if not fbsp_cache_baim.applied
+        print( "[PLAYERLIST] WARNING: Force baim hasn't been applied." )
+    for weapon, value in pairs fbsp_cache_baim
+        continue if weapon == "applied"
+        gui.SetValue "rbot.hitscan.mode.#{weapon}.bodyaim", value
+
+    fbsp_cache_baim = { applied: false }
+
+fbsp_cache_sp = { applied: false }
+fbsp_sp_regions = {"delayshot", "delayshotbody", "delayshotlimbs"}
+fbsp_sp_apply = -> -- sp = safepoint
+    if fbsp_cache_sp.applied
+        print( "[PLAYERLIST] WARNING: Force safepoint has already been applied." )
+    for weapon in *fbsp_weapon_types
+        for delayshot_region in *fbsp_sp_regions
+            if gui.GetValue"rbot.hitscan.mode.#{weapon}.#{delayshot_region}" != 1
+                fbsp_cache_sp[ "#{weapon}.#{delayshot_region}" ] = gui.GetValue"rbot.hitscan.mode.#{weapon}.#{delayshot_region}"
+                gui.SetValue "rbot.hitscan.mode.#{weapon}.#{delayshot_region}", 1 -- 1 == safepoint
+    fbsp_cache_sp.applied = true
+fbsp_sp_undo = ->
+    if not fbsp_cache_sp.applied
+        print( "[PLAYERLIST] WARNING: Force safepoint hasn't been applied." )
+    for weapon, value in pairs fbsp_cache_sp
+        continue if weapon == "applied"
+        gui.SetValue "rbot.hitscan.mode.#{weapon}", value
+
+    fbsp_cache_sp = { applied: false }
+
+fbsp_targetted_enemy = nil
+callbacks.Register "AimbotTarget", "playerlist.plugins.FBSP.AimbotTarget", (entity) ->
+    if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
+
+    fbsp_targetted_enemy = entity
+    
+    set = plist.GetByIndex entity\GetIndex!
+    if set.get"force.baim"
+        if not fbsp_cache_baim.applied
+            fbsp_baim_apply!
+    elseif fbsp_cache_baim.applied
+        fbsp_baim_undo!
+        
+    if set.get"force.safepoint"
+        if not fbsp_cache_sp.applied
+            fbsp_sp_apply!
+    elseif fbsp_cache_sp.applied
+        fbsp_sp_undo!
+        
+
+callbacks.Register "FireGameEvent", "playerlist.plugins.FBSP.FireGameEvent", (event) ->
+	if event\GetName! == "player_death" and fbsp_targetted_enemy and client.GetPlayerIndexByUserID( event\GetInt"userid" ) == fbsp_targetted_enemy\GetIndex! -- reset enemy after death
+        fbsp_targetted_enemy = nil
+        if fbsp_cache_baim.applied
+            fbsp_baim_undo!
+        if fbsp_cache_sp.applied
+            fbsp_sp_undo!
+
+-- per player esp plugin (ppe)
+plist.gui.Checkbox "esp", "ESP", false
+
+-- copy pasta from https://aimware.net/forum/thread/109067 (V4 script)
+callbacks.Register "DrawESP", "playerlist.plugins.PPE.DrawESP", (builder) ->
+    player = builder\GetEntity!
+    if not player\IsPlayer! then return
+    
+    if plist.GetByIndex( player\GetIndex! ).get"esp"
+            draw.Color 0x80, 0x80, 0x80, 0xFF
+            draw.OutlinedRect builder\GetRect!
+
+
+-- removed by `build.py` to prevent crashes
 return "__REMOVE_ME__"
