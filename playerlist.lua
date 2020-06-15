@@ -345,7 +345,7 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   local UPD_HEIGHT = 190
   local UPDATE = gui.Groupbox(GUI_TAB, "Update Available", GUI_TAB_PLIST_POS.x, GUI_TAB_PLIST_POS.y, 618, UPD_HEIGHT)
   local text = gui.Text(UPDATE, "Current version: " .. tostring(__version__) .. "\nLatest version: " .. tostring(content))
-  local minified = gui.Checkbox(UPDATE, "updater.minified", "Download minified version", false)
+  local minified = gui.Checkbox(UPDATE, "updater.minified", "Download minified version", true)
   local btn
   do
     local _with_0 = gui.Button(UPDATE, "Update", function()
