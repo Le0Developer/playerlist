@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.1.0"
+local __version__ = "1.1.1"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -384,7 +384,7 @@ callbacks.Register("CreateMove", "playerlist.plugins.Resolver.CreateMove", funct
       end
       local set = plist.GetByIndex(player:GetIndex())
       if set.get("resolver.type") == 2 then
-        player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles").y + set.get("resolver.type") + 180) % 360 - 180)
+        player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles").y + set.get("resolver.lby_override") + 180) % 360 - 180)
       end
       _continue_0 = true
     until true

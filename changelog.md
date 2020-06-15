@@ -22,7 +22,7 @@
   - Fixed multiple errors with empty userlists
   - Fixed issue with visible userlist desyncing with the internal
 
-- Version 1.1.0 | 2020.06.1
+- Version 1.1.0 | 2020.06.15
   - Moved into a tab from a window
   - Added a `Clear` button to clear playerlist and settings
   - Added resolver `on`/`off` combobox and moved LBY override into it as `manual`
@@ -32,3 +32,7 @@
   - Player settings are now disabled when there're no players
   - Fixed bug in `plist.gui.Button` crashing AIMWARE
   - Added `plist.gui.Multibox` and `plist.gui.Multibox_Checkbox`
+  - Increased override lby range
+
+- Version 1.1.1 | 2020.06.15
+  - Fixed bug in manual resolver

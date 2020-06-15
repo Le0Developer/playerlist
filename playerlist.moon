@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -270,7 +270,7 @@ callbacks.Register "CreateMove", "playerlist.plugins.Resolver.CreateMove", (cmd)
         
         set = plist.GetByIndex player\GetIndex!
         if set.get"resolver.type" == 2
-            player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"resolver.type" + 180) % 360 - 180
+            player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"resolver.lby_override" + 180) % 360 - 180
 
 -- player priority plugin
 priority_targetted_entity = nil
