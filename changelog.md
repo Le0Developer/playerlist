@@ -21,3 +21,14 @@
   - Removed team check for LBY Override
   - Fixed multiple errors with empty userlists
   - Fixed issue with visible userlist desyncing with the internal
+
+- Version 1.1.0 | 2020.06.1
+  - Moved into a tab from a window
+  - Added a `Clear` button to clear playerlist and settings
+  - Added resolver `on`/`off` combobox and moved LBY override into it as `manual`
+  - Moved `Force BAIM` and `Force Safepoint` into a multibox
+  - Added descriptions
+  - Added updater (a groupbox will appear above the playerlist when there's an update)
+  - Player settings are now disabled when there're no players
+  - Fixed bug in `plist.gui.Button` crashing AIMWARE
+  - Added `plist.gui.Multibox` and `plist.gui.Multibox_Checkbox`
