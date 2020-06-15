@@ -40,5 +40,5 @@
 - Version 1.1.2 | 2020.06.15
   - Added `plist.gui.Delete`, for deleting old gui objects after unloading an extension
   - Renamed internal naming from `plugin` to `extension`
-  - Added `plist.gui.GetSelected`, `GetSelectedIndex` and `GetSelectedUserID`
+  - Added `plist.GetSelected`, `plist.GetSelectedIndex` and `plist.GetSelectedUserID`
   - Updater now uses minified version by default
