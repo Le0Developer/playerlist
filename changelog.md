@@ -36,3 +36,9 @@
 
 - Version 1.1.1 | 2020.06.15
   - Fixed bug in manual resolver
+
+- Version 1.1.2 | 2020.06.15
+  - Added `plist.gui.Delete`, for deleting old gui objects after unloading an extension
+  - Renamed internal naming from `plugin` to `extension`
+  - Added `plist.gui.GetSelected`, `GetSelectedIndex` and `GetSelectedUserID`
+  - Updater now uses minified version by default

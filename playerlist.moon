@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -32,7 +32,7 @@ with gui.Button GUI_TAB_PLIST, "Clear", ->
 GUI_TAB_SET_POS = { x: GUI_TAB_PLIST_POS.x + GUI_TAB_PLIST_POS.w + 4, y: GUI_TAB_PLIST_POS.y, w: 618 - LIST_WIDTH, h: 0 }
 GUI_TAB_SET = gui.Groupbox GUI_TAB, "Per Player Settings", GUI_TAB_SET_POS.x, GUI_TAB_SET_POS.y, GUI_TAB_SET_POS.w, GUI_TAB_SET_POS.h
 
-setting_wrapper = (settings) ->
+settings_wrapper = (settings) ->
     {
         set: (varname, value) ->
             settings.settings[ varname ] = value
@@ -52,6 +52,7 @@ export plist = {
                 set: (value_) -> checkbox\SetValue value_
                 get: -> checkbox\GetValue!
                 default: value
+                obj: checkbox
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = value
@@ -64,6 +65,7 @@ export plist = {
                 set: (value_) -> slider\SetValue value_
                 get: -> slider\GetValue!
                 default: value
+                obj: slider
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = value
@@ -76,6 +78,7 @@ export plist = {
                 set: (value_) -> colorpicker\SetValue unpack value_
                 get: -> {colorpicker\GetValue!}
                 default: {r, g, b, a}
+                obj: colorpicker
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = {r, g, b, a}
@@ -91,6 +94,7 @@ export plist = {
                     current_text = value_
                 get: -> current_text
                 default: text
+                obj: text_
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = text
@@ -103,6 +107,7 @@ export plist = {
                 set: (value_) -> combobox\SetValue value_
                 get: -> combobox\GetValue!
                 default: 0
+                obj: combobox
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = 0
@@ -125,6 +130,7 @@ export plist = {
                 set: (value_) -> editbox\SetValue value_
                 get: -> editbox\GetValue!
                 default: 0
+                obj: editbox
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = 0
@@ -142,20 +148,43 @@ export plist = {
                 set: (value_) -> checkbox\SetValue value_
                 get: -> checkbox\GetValue!
                 default: value
+                obj: checkbox
             }
             for _, setting in pairs playersettings
                 setting.settings[ varname ] = value
             checkbox
 
+        Delete: ( object ) ->
+            object\Delete!
+            for varname, info in pairs guisettings
+                if info.obj == object -- found matching varname
+                    guisettings[ varname ] = nil -- remove object from varnames
+                    for uid, set in pairs playersettings
+                        set.settings[ varname ] = nil -- remove object from all players
+                    break -- only one can match, so we quit
+
     }
-    GetByUserID: (userid) -> setting_wrapper playersettings[ userid ]
+    GetByUserID: (userid) -> settings_wrapper playersettings[ userid ]
     GetByIndex: (index) ->
         pinfo = client.GetPlayerInfo index
         if pinfo != nil
-            return setting_wrapper playersettings[ pinfo[ "UserID" ] ]
+            return settings_wrapper playersettings[ pinfo[ "UserID" ] ]
 
         for _, info in pairs playersettings
-            if info.info.index == index then return setting_wrapper info
+            if info.info.index == index then return settings_wrapper info
+
+    GetSelected: ->
+        if #playerlist > 0
+           settings_wrapper playersettings[ playerlist[ GUI_TAB_PLIST_LIST\GetValue! + 1 ] ]
+        nil
+    GetSelectedIndex: ->
+        if #playerlist > 0
+            playersettings[ playerlist[ GUI_TAB_PLIST_LIST\GetValue! + 1 ] ].info.index
+        nil
+    GetSelectedUserID: ->
+        if #playerlist > 0
+            playerlist[ GUI_TAB_PLIST_LIST\GetValue! + 1 ]
+        nil
 }
 
 selected_player = nil
@@ -219,7 +248,7 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
     UPD_HEIGHT = 190
     UPDATE = gui.Groupbox GUI_TAB, "Update Available", GUI_TAB_PLIST_POS.x, GUI_TAB_PLIST_POS.y, 618, UPD_HEIGHT
     text = gui.Text UPDATE, "Current version: #{__version__}\nLatest version: #{content}"
-    minified = gui.Checkbox UPDATE, "updater.minified", "Download minified version", false
+    minified = gui.Checkbox UPDATE, "updater.minified", "Download minified version", true
     local btn
     btn = with gui.Button UPDATE, "Update", ->
             text\SetText "Updating..."
@@ -248,13 +277,13 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
     GUI_TAB_SET_POS.y += UPD_HEIGHT
     GUI_TAB_SET\SetPosY GUI_TAB_SET_POS.y
 
--- resolver plugin
+-- resolver extension
 with plist.gui.Combobox "resolver.type", "Resolver", "On", "Off", "Manual (LBY Override)"
     \SetDescription "Choose a resolver for this player."
 with plist.gui.Slider "resolver.lby_override", "LBY Override Value", 0, -180, 180
     \SetDescription "The LBY value for resolving when using manual resolver."
 
-callbacks.Register "AimbotTarget", "playerlist.plugins.Resolver.AimbotTarget", (entity) ->
+callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", (entity) ->
     if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
     set = plist.GetByIndex entity\GetIndex!
     if set.get"resolver.type" == 0
@@ -262,7 +291,7 @@ callbacks.Register "AimbotTarget", "playerlist.plugins.Resolver.AimbotTarget", (
     else
         gui.SetValue "rbot.accuracy.posadj.resolver", false
 
-callbacks.Register "CreateMove", "playerlist.plugins.Resolver.CreateMove", (cmd) ->
+callbacks.Register "CreateMove", "playerlist.extensions.Resolver.CreateMove", (cmd) ->
     localplayer = entities.GetLocalPlayer!
     for player in *entities.FindByClass"CCSPlayer"
         if not player\IsAlive!
@@ -272,10 +301,10 @@ callbacks.Register "CreateMove", "playerlist.plugins.Resolver.CreateMove", (cmd)
         if set.get"resolver.type" == 2
             player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"resolver.lby_override" + 180) % 360 - 180
 
--- player priority plugin
+-- player priority extension
 priority_targetted_entity = nil
 priority_targetting_priority = false
-callbacks.Register "AimbotTarget", "playerlist.plugins.Priority.AimbotTarget", (entity) ->
+callbacks.Register "AimbotTarget", "playerlist.extensions.Priority.AimbotTarget", (entity) ->
     if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
 	if priority_targetted_entity and entity\GetIndex! != priority_targetted_entity\GetIndex!
 		if priority_targetting_priority
@@ -294,7 +323,7 @@ with plist.gui.Combobox "targetmode", "Targetmode", "Normal", "Friendly", "Prior
 
 priority_lock_fov = 3
 priority_friendly_affected = {}
-callbacks.Register "CreateMove", "playerlist.plugins.Priority.CreateMove", (cmd) ->
+callbacks.Register "CreateMove", "playerlist.extensions.Priority.CreateMove", (cmd) ->
     localplayer = entities.GetLocalPlayer!
     for player in *entities.FindByClass"CCSPlayer"
         if not player\IsAlive!
@@ -331,7 +360,7 @@ callbacks.Register "CreateMove", "playerlist.plugins.Priority.CreateMove", (cmd)
 					
 					--print("priority targetting", player)
 
-callbacks.Register "FireGameEvent", "playerlist.plugins.Priority.FireGameEvent", (event) ->
+callbacks.Register "FireGameEvent", "playerlist.extensions.Priority.FireGameEvent", (event) ->
 	-- we have to reset FOV and stuff after they die
 	if event\GetName! == "player_death" and priority_targetting_priority
 		if client.GetPlayerIndexByUserID( event\GetInt"userid" ) == priority_targetted_entity\GetIndex!
@@ -342,7 +371,7 @@ callbacks.Register "FireGameEvent", "playerlist.plugins.Priority.FireGameEvent",
 			gui.SetValue "rbot.aim.target.fov", 180
 			gui.SetValue "rbot.aim.target.lock", false
 			
--- Force Baim / SafePoint plugin (fbsp)
+-- Force Baim / SafePoint extension (fbsp)
 fbsp_force = plist.gui.Multibox "Force ..."
 with plist.gui.Multibox_Checkbox fbsp_force, "force.baim", "BAIM", false
     \SetDescription "Set's bodyaim to priority."
@@ -390,7 +419,7 @@ fbsp_sp_undo = ->
     fbsp_cache_sp = { applied: false }
 
 fbsp_targetted_enemy = nil
-callbacks.Register "AimbotTarget", "playerlist.plugins.FBSP.AimbotTarget", (entity) ->
+callbacks.Register "AimbotTarget", "playerlist.extensions.FBSP.AimbotTarget", (entity) ->
     if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
 
     fbsp_targetted_enemy = entity
@@ -409,7 +438,7 @@ callbacks.Register "AimbotTarget", "playerlist.plugins.FBSP.AimbotTarget", (enti
         fbsp_sp_undo!
         
 
-callbacks.Register "FireGameEvent", "playerlist.plugins.FBSP.FireGameEvent", (event) ->
+callbacks.Register "FireGameEvent", "playerlist.extensions.FBSP.FireGameEvent", (event) ->
 	if event\GetName! == "player_death" and fbsp_targetted_enemy and client.GetPlayerIndexByUserID( event\GetInt"userid" ) == fbsp_targetted_enemy\GetIndex! -- reset enemy after death
         fbsp_targetted_enemy = nil
         if fbsp_cache_baim.applied
@@ -417,12 +446,12 @@ callbacks.Register "FireGameEvent", "playerlist.plugins.FBSP.FireGameEvent", (ev
         if fbsp_cache_sp.applied
             fbsp_sp_undo!
 
--- per player esp plugin (ppe)
+-- per player esp extension (ppe)
 with plist.gui.Checkbox "esp", "ESP", false
     \SetDescription "Basic Box ESP."
 
 -- copy pasta from https://aimware.net/forum/thread/109067 (V4 script)
-callbacks.Register "DrawESP", "playerlist.plugins.PPE.DrawESP", (builder) ->
+callbacks.Register "DrawESP", "playerlist.extensions.PPE.DrawESP", (builder) ->
     player = builder\GetEntity!
     if not player\IsPlayer! then return
     
