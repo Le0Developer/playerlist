@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.0"
+local __version__ = "1.2.1"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -89,10 +89,10 @@ PreservingGUIObject = function(obj, recreate)
   local public = {
     obj = obj
   }
-  public.reapply = function(obj)
-    public.obj = obj
+  public.reapply = function(nobj)
+    public.obj = nobj
     for func, vars in pairs(modifiers) do
-      public[func](obj, unpack(vars))
+      nobj[func](nobj, unpack(vars))
     end
   end
   setmetatable(public, {
@@ -389,7 +389,7 @@ plist = {
       for varname, info in pairs(guisettings) do
         if info.obj == object then
           guisettings[varname] = nil
-          for uid, set in pairs(playersettings) do
+          for _, set in pairs(playersettings) do
             set.settings[varname] = nil
           end
           break
@@ -629,7 +629,21 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   end
   do
     local _with_0 = gui.Button(UPDATE, "Open Changelog in Browser", function()
-      return panorama.RunScript("SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md' );")
+      local sanitized_version = ""
+      local allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+      do
+        local _tbl_0 = { }
+        for cno = 1, #allowed do
+          _tbl_0[allowed:sub(cno, cno)] = true
+        end
+        allowed = _tbl_0
+      end
+      for cno = 1, #content do
+        if allowed[content:sub(cno, cno)] then
+          sanitized_version = sanitized_version .. content:sub(cno, cno)
+        end
+      end
+      return panorama.RunScript("SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md#version-" .. sanitized_version .. "' );")
     end)
     _with_0:SetWidth(290)
     _with_0:SetPosX(300)
@@ -1000,8 +1014,9 @@ end)
 local ppe_chams_materials = { }
 local ppe_chams_GetMat
 ppe_chams_GetMat = function(color, visible)
-  if ppe_chams_materials[color] then
-    return ppe_chams_materials[color]
+  local name = color[1] + color[2] * 256 + color[3] * 65536 + color[4] * 16777216 + visible * 4294967296
+  if ppe_chams_materials[name] then
+    return ppe_chams_materials[name]
   end
   local vmt = ([[        "VertexLitGeneric" {
         "$basetexture" "vgui/white_additive"
@@ -1009,8 +1024,8 @@ ppe_chams_GetMat = function(color, visible)
         "$alpha" "%s"
         "$ignorez" "%s"
     }]]):format(color[1] / 255, color[2] / 255, color[3] / 255, color[4] / 255, visible)
-  ppe_chams_materials[color] = materials.Create("Chams", vmt)
-  return ppe_chams_materials[color]
+  ppe_chams_materials[name] = materials.Create("Chams", vmt)
+  return ppe_chams_materials[name]
 end
 callbacks.Register("DrawModel", "playerlist.extensions.PPE.DrawModel", function(builder)
   local player = builder:GetEntity()
