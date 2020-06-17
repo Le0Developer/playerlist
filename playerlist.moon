@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -61,10 +61,10 @@ PreservingGUIObject = (obj, recreate) ->
     public = {
         obj: obj
     }
-    public.reapply = (obj) ->
-        public.obj = obj
+    public.reapply = (nobj) ->
+        public.obj = nobj
         for func, vars in pairs modifiers
-            public[ func ] obj, unpack vars
+            nobj[ func ] nobj, unpack vars
 
     setmetatable public, {
         __index: (varname) =>
@@ -288,7 +288,7 @@ export plist = {
             for varname, info in pairs guisettings
                 if info.obj == object -- found matching varname
                     guisettings[ varname ] = nil -- remove object from varnames
-                    for uid, set in pairs playersettings
+                    for _, set in pairs playersettings
                         set.settings[ varname ] = nil -- remove object from all players
                     break -- only one can match, so we quit
 
@@ -461,7 +461,12 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
             return "__REMOVE_ME__"
         \SetWidth 290
     with gui.Button UPDATE, "Open Changelog in Browser", ->
-            panorama.RunScript "SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md' );"
+            sanitized_version = ""
+            allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+            allowed = {allowed\sub(cno, cno), true for cno=1, #allowed}
+            for cno=1, #content
+                if allowed[ content\sub cno, cno ] then sanitized_version ..= content\sub cno, cno
+            panorama.RunScript "SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md#version-" .. sanitized_version .. "' );"
         \SetWidth 290
         \SetPosX 300
         \SetPosY 78
@@ -700,19 +705,20 @@ callbacks.Register "DrawESP", "playerlist.extensions.PPE.DrawESP", (builder) ->
 -- credits to Zerdos for the chams code, a bit hard to do without wiki
 ppe_chams_materials = {}
 ppe_chams_GetMat = (color, visible) ->
-    if ppe_chams_materials[ color ]
-        return ppe_chams_materials[ color ]
+    name = color[ 1 ] + color[ 2 ] * 256 + color[ 3 ] * 65536 + color[ 4 ] * 16777216 + visible * 4294967296
+    if ppe_chams_materials[ name ]
+        return ppe_chams_materials[ name ]
 
-    vmt = [[
-        "VertexLitGeneric" {
-        "$basetexture" "vgui/white_additive"
-        "$color" "[%s %s %s]"
-        "$alpha" "%s"
-        "$ignorez" "%s"
-    }]]\format color[ 1 ] / 255, color[ 2 ] / 255, color[ 3 ] / 255, color[ 4 ] / 255, visible
+    vmt = "
+        'VertexLitGeneric' {
+        '$basetexture' 'vgui/white_additive'
+        '$color' '[#{color[ 1 ] / 255} #{color[ 2 ] / 255} #{color[ 3 ] / 255}]'
+        '$alpha' '#{color[ 4 ] / 255}'
+        '$ignorez' '#{visible}'
+    }"
 
-    ppe_chams_materials[ color ] = materials.Create "Chams", vmt
-    ppe_chams_materials[ color ]
+    ppe_chams_materials[ name ] = materials.Create "Chams", vmt
+    ppe_chams_materials[ name ]
 
 callbacks.Register "DrawModel", "playerlist.extensions.PPE.DrawModel", (builder) ->
     player = builder\GetEntity!

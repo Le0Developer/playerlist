@@ -52,3 +52,8 @@
   - Changed LBY Override range back from 180 to 58
   - Added `Name`, `Chams`, `Health` and `Ammo` to ESPy
   - Added `plist.gui.Multibox_Colorpicker`
+
+## Version 1.2.1
+  - Fixed crash after a while of using per player chams (caching of materials failed)
+  - Clicking on "Open Changelog" in updater will now jump to the version
+  - Made changes to the code to make the minified version a one-liner again
