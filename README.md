@@ -33,7 +33,7 @@ This lua adds a public api available under `plist`, which can be used to make ex
 ### Example Extension
 
 ```lua
-plist.gui.Checkbox("killsay", "Trashtalk when they die", false)
+local killsay_ref = plist.gui.Checkbox("killsay", "Say a message when they die", false)
 
 client.AllowListener("player_hurt")
 callbacks.Register("FireGameEvent", function(Event)
@@ -52,13 +52,17 @@ callbacks.Register("FireGameEvent", function(Event)
 
   end
 end)
+
+callbacks.Register("Unload", function()
+  plist.gui.Remove( killsay_ref ) -- delete the checkbox after unloading
+end)
 ```
 
 ## Credits
 
 This program includes source from:
-  - [PlayerList](https://aimware.net/forum/thread/136420) by [Zerdos](https://aimware.net/forum/user/119901) [GITHUB](https://github.com/zer420/Player-List) Affected code: Prioritizing players.
-  - [Per Player ESP](https://aimware.net/forum/thread/109067) by [Cheeseot](https://aimware.net/forum/user/215088) Affected code: Per Player ESP
+  - [PlayerList](https://aimware.net/forum/thread/136420) by [Zerdos](https://aimware.net/forum/user/119901) [GITHUB](https://github.com/zer420/Player-List) Affected code: Prioritizing players and chams code.
+  - [Per Player ESP](https://aimware.net/forum/thread/109067) by [Cheeseot](https://aimware.net/forum/user/215088) Affected code: ESP Box
 
 I'm also thanking:
   - The amazing people from the unofficial AIMWARE discord server.

@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.1.2"
+local __version__ = "1.2.0"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -11,38 +11,70 @@ local playerlist = { }
 local playersettings = { }
 local MENU = gui.Reference("Menu")
 local LIST_WIDTH = 300
-local GUI_TAB = gui.Tab(gui.Reference("Misc"), "playerlist." .. tostring(randomname), "Player List")
-local GUI_TAB_PLIST_POS = {
+local GUI_TAB = gui.Tab(gui.Reference("Misc"), "playerlist", "Player List")
+local GUI_WINDOW
+do
+  local _with_0 = gui.Window("playerlist", "Player List", 100, 100, 530, 600)
+  _with_0:SetActive(false)
+  GUI_WINDOW = _with_0
+end
+local GUI_TAB_CTRL_POS = {
   x = 8,
   y = 8,
+  w = 618,
+  h = 108
+}
+local GUI_TAB_CTRL = gui.Groupbox(GUI_TAB, "Menu Controller", GUI_TAB_CTRL_POS.x, GUI_TAB_CTRL_POS.y, GUI_TAB_CTRL_POS.w, GUI_TAB_CTRL_POS.h)
+local GUI_TAB_CTRL_MODE
+do
+  local _with_0 = gui.Combobox(GUI_TAB_CTRL, "controller.mode", "Menu Mode", "Tab", "Window")
+  _with_0:SetWidth(200)
+  GUI_TAB_CTRL_MODE = _with_0
+end
+local GUI_TAB_CTRL_OPENKEY
+do
+  local _with_0 = gui.Keybox(GUI_TAB_CTRL, "controller.openkey", "Window Openkey", 0)
+  _with_0:SetWidth(200)
+  _with_0:SetPosX(210)
+  _with_0:SetPosY(0)
+  _with_0:SetDisabled(true)
+  GUI_TAB_CTRL_OPENKEY = _with_0
+end
+local selected_player = nil
+local GUI_PLIST_POS = {
+  x = GUI_TAB_CTRL_POS.x,
+  y = GUI_TAB_CTRL_POS.y + GUI_TAB_CTRL_POS.h,
   w = LIST_WIDTH,
   h = 0
 }
-local GUI_TAB_PLIST = gui.Groupbox(GUI_TAB, "Select a player", GUI_TAB_PLIST_POS.x, GUI_TAB_PLIST_POS.y, GUI_TAB_PLIST_POS.w, GUI_TAB_PLIST_POS.h)
-local GUI_TAB_PLIST_LIST = gui.Listbox(GUI_TAB_PLIST, "players", 440)
+local GUI_PLIST = gui.Groupbox(GUI_TAB, "Select a player", GUI_PLIST_POS.x, GUI_PLIST_POS.y, GUI_PLIST_POS.w, GUI_PLIST_POS.h)
+local GUI_PLIST_LIST = gui.Listbox(GUI_PLIST, tostring(randomname) .. ".players", 440)
+local GUI_PLIST_CLEAR
 do
-  local _with_0 = gui.Button(GUI_TAB_PLIST, "Clear", function()
-    GUI_TAB_PLIST_LIST:SetOptions()
+  local _with_0 = gui.Button(GUI_PLIST, "Clear", function()
+    selected_player = nil
+    GUI_PLIST_LIST:SetOptions()
     playersettings = { }
     playerlist = { }
   end)
   _with_0:SetPosX(188)
   _with_0:SetPosY(-42)
   _with_0:SetWidth(80)
+  GUI_PLIST_CLEAR = _with_0
 end
-local GUI_TAB_SET_POS = {
-  x = GUI_TAB_PLIST_POS.x + GUI_TAB_PLIST_POS.w + 4,
-  y = GUI_TAB_PLIST_POS.y,
+local GUI_SET_POS = {
+  x = GUI_PLIST_POS.x + GUI_PLIST_POS.w + 4,
+  y = GUI_PLIST_POS.y,
   w = 618 - LIST_WIDTH,
   h = 0
 }
-local GUI_TAB_SET = gui.Groupbox(GUI_TAB, "Per Player Settings", GUI_TAB_SET_POS.x, GUI_TAB_SET_POS.y, GUI_TAB_SET_POS.w, GUI_TAB_SET_POS.h)
+local GUI_SET = gui.Groupbox(GUI_TAB, "Per Player Settings", GUI_SET_POS.x, GUI_SET_POS.y, GUI_SET_POS.w, GUI_SET_POS.h)
 local settings_wrapper
 settings_wrapper = function(settings)
   return {
     set = function(varname, value)
       settings.settings[varname] = value
-      if #playerlist > 0 and playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1] == settings.info.uid then
+      if #playerlist > 0 and playerlist[GUI_PLIST_LIST:GetValue() + 1] == settings.info.uid then
         return guisettings[varname].set(value)
       end
     end,
@@ -51,10 +83,38 @@ settings_wrapper = function(settings)
     end
   }
 end
+local PreservingGUIObject
+PreservingGUIObject = function(obj, recreate)
+  local modifiers = { }
+  local public = {
+    obj = obj
+  }
+  public.reapply = function(obj)
+    public.obj = obj
+    for func, vars in pairs(modifiers) do
+      public[func](obj, unpack(vars))
+    end
+  end
+  setmetatable(public, {
+    __index = function(self, varname)
+      if varname:sub(1, 3) == "Set" then
+        return function(self, ...)
+          modifiers[varname] = {
+            ...
+          }
+          return public.obj[varname](public.obj, ...)
+        end
+      end
+      return public.obj[varname]
+    end
+  })
+  return public
+end
 plist = {
   gui = {
     Checkbox = function(varname, name, value)
-      local checkbox = gui.Checkbox(GUI_TAB_SET, "settings." .. tostring(varname), name, value)
+      local checkbox = gui.Checkbox(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), name, value)
+      local pubcheckbox = PreservingGUIObject(checkbox)
       guisettings[varname] = {
         set = function(value_)
           return checkbox:SetValue(value_)
@@ -68,11 +128,19 @@ plist = {
       for _, setting in pairs(playersettings) do
         setting.settings[varname] = value
       end
-      table.insert(guiobjects, checkbox)
-      return checkbox
+      table.insert(guiobjects, {
+        obj = checkbox,
+        recreate = function()
+          checkbox = gui.Checkbox(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), name, value)
+          pubcheckbox.reapply(checkbox)
+          return checkbox
+        end
+      })
+      return pubcheckbox
     end,
     Slider = function(varname, name, value, min, max, step)
-      local slider = gui.Slider(GUI_TAB_SET, "settings." .. tostring(varname), name, value, min, max, step or 1)
+      local slider = gui.Slider(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), name, value, min, max, step or 1)
+      local pubslider = PreservingGUIObject(slider)
       guisettings[varname] = {
         set = function(value_)
           return slider:SetValue(value_)
@@ -86,11 +154,19 @@ plist = {
       for _, setting in pairs(playersettings) do
         setting.settings[varname] = value
       end
-      table.insert(guiobjects, slider)
-      return slider
+      table.insert(guiobjects, {
+        obj = slider,
+        recreate = function()
+          slider = gui.Slider(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), name, value, min, max, step or 1)
+          pubslider.reapply(slider)
+          return slider
+        end
+      })
+      return pubslider
     end,
     ColorPicker = function(varname, name, r, g, b, a)
-      local colorpicker = gui.ColorPicker(GUI_TAB_SET, "settings." .. tostring(varname), r, g, b, a)
+      local colorpicker = gui.ColorPicker(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), r, g, b, a)
+      local pubcolorpicker = PreservingGUIObject(colorpicker)
       guisettings[varname] = {
         set = function(value_)
           return colorpicker:SetValue(unpack(value_))
@@ -116,11 +192,19 @@ plist = {
           a
         }
       end
-      table.insert(guiobjects, colorpicker)
-      return colorpicker
+      table.insert(guiobjects, {
+        obj = colorpicker,
+        recreate = function()
+          colorpicker = gui.ColorPicker(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), r, g, b, a)
+          pubcolorpicker.reapply(colorpicker)
+          return colorpicker
+        end
+      })
+      return pubcolorpicker
     end,
     Text = function(varname, text)
-      local text_ = gui.Text(GUI_TAB_SET, text)
+      local text_ = gui.Text(GUI_SET, text)
+      local pubtext = PreservingGUIObject(text_)
       local current_text = text
       guisettings[varname] = {
         set = function(value_)
@@ -136,11 +220,19 @@ plist = {
       for _, setting in pairs(playersettings) do
         setting.settings[varname] = text
       end
-      table.insert(guiobjects, text)
-      return text
+      table.insert(guiobjects, {
+        obj = text_,
+        recreate = function()
+          text_ = gui.Text(GUI_SET, text)
+          pubtext.reapply(text_)
+          return text_
+        end
+      })
+      return pubtext
     end,
     Combobox = function(varname, name, ...)
-      local combobox = gui.Combobox(GUI_TAB_SET, "settings." .. tostring(varname), name, ...)
+      local combobox = gui.Combobox(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), name, ...)
+      local pubcombobox = PreservingGUIObject(combobox)
       guisettings[varname] = {
         set = function(value_)
           return combobox:SetValue(value_)
@@ -154,23 +246,44 @@ plist = {
       for _, setting in pairs(playersettings) do
         setting.settings[varname] = 0
       end
-      table.insert(guiobjects, combobox)
-      return combobox
+      local args = {
+        ...
+      }
+      table.insert(guiobjects, {
+        obj = combobox,
+        recreate = function()
+          combobox = gui.Combobox(GUI_SET, tostring(randomname) .. ".settings." .. tostring(varname), name, unpack(args))
+          pubcombobox.reapply(combobox)
+          return combobox
+        end
+      })
+      return pubcombobox
     end,
     Button = function(name, callback)
-      local button = gui.Button(GUI_TAB_SET, name, function()
+      local mcallback
+      mcallback = function()
         if #playerlist > 0 then
-          callback(playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1])
+          callback(playerlist[GUI_PLIST_LIST:GetValue() + 1])
         else
           callback()
         end
         
-      end)
-      table.insert(guiobjects, button)
-      return button
+      end
+      local button = gui.Button(GUI_SET, name, mcallback)
+      local pubbutton = PreservingGUIObject(button)
+      table.insert(guiobjects, {
+        obj = button,
+        recreate = function()
+          button = gui.Button(GUI_SET, name, mcallback)
+          pubbutton.reapply(button)
+          return button
+        end
+      })
+      return pubbutton
     end,
     Editbox = function(varname, name)
-      local editbox = gui.Editbox(GUI_TAB_SET, varname, name)
+      local editbox = gui.Editbox(GUI_SET, varname, name)
+      local pubeditbox = PreservingGUIObject(editbox)
       guisettings[varname] = {
         set = function(value_)
           return editbox:SetValue(value_)
@@ -184,16 +297,32 @@ plist = {
       for _, setting in pairs(playersettings) do
         setting.settings[varname] = 0
       end
-      table.insert(guiobjects, editbox)
-      return editbox
+      table.insert(guiobjects, {
+        obj = editbox,
+        recreate = function()
+          editbox = gui.Editbox(GUI_SET, varname, name)
+          pubeditbox.reapply(editbox)
+          return editbox
+        end
+      })
+      return pubeditbox
     end,
     Multibox = function(name)
-      local multibox = gui.Multibox(GUI_TAB_SET, name)
-      table.insert(guiobjects, multibox)
-      return multibox
+      local multibox = gui.Multibox(GUI_SET, name)
+      local pubmultibox = PreservingGUIObject(multibox)
+      table.insert(guiobjects, {
+        obj = multibox,
+        recreate = function()
+          multibox = gui.Multibox(GUI_SET, name)
+          pubmultibox.reapply(multibox)
+          return multibox
+        end
+      })
+      return pubmultibox
     end,
     Multibox_Checkbox = function(parent, varname, name, value)
-      local checkbox = gui.Checkbox(parent, "settings." .. tostring(varname), name, value)
+      local checkbox = gui.Checkbox(parent.obj, tostring(randomname) .. ".settings." .. tostring(varname), name, value)
+      local pubcheckbox = PreservingGUIObject(checkbox)
       guisettings[varname] = {
         set = function(value_)
           return checkbox:SetValue(value_)
@@ -207,10 +336,56 @@ plist = {
       for _, setting in pairs(playersettings) do
         setting.settings[varname] = value
       end
-      return checkbox
+      table.insert(guiobjects, {
+        obj = checkbox,
+        recreate = function()
+          checkbox = gui.Checkbox(parent.obj, tostring(randomname) .. ".settings." .. tostring(varname), name, value)
+          pubcheckbox.reapply(checkbox)
+          return checkbox
+        end
+      })
+      return pubcheckbox
     end,
-    Delete = function(object)
-      object:Delete()
+    Multibox_ColorPicker = function(parent, varname, name, r, g, b, a)
+      local colorpicker = gui.ColorPicker(parent.obj, varname, r, g, b, a)
+      local pubcolorpicker = PreservingGUIObject(colorpicker)
+      guisettings[varname] = {
+        set = function(value_)
+          return colorpicker:SetValue(unpack(value_))
+        end,
+        get = function()
+          return {
+            colorpicker:GetValue()
+          }
+        end,
+        default = {
+          r,
+          g,
+          b,
+          a
+        },
+        obj = colorpicker
+      }
+      for _, setting in pairs(playersettings) do
+        setting.settings[varname] = {
+          r,
+          g,
+          b,
+          a
+        }
+      end
+      table.insert(guiobjects, {
+        obj = colorpicker,
+        recreate = function()
+          colorpicker = gui.ColorPicker(parent.obj, tostring(randomname) .. ".settings." .. tostring(varname), r, g, b, a)
+          pubcolorpicker.reapply(colorpicker)
+          return colorpicker
+        end
+      })
+      return pubcolorpicker
+    end,
+    Remove = function(object)
+      object:Remove()
       for varname, info in pairs(guisettings) do
         if info.obj == object then
           guisettings[varname] = nil
@@ -238,59 +413,135 @@ plist = {
   end,
   GetSelected = function()
     if #playerlist > 0 then
-      settings_wrapper(playersettings[playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1]])
+      settings_wrapper(playersettings[playerlist[GUI_PLIST_LIST:GetValue() + 1]])
     end
     return nil
   end,
   GetSelectedIndex = function()
     if #playerlist > 0 then
-      local _ = playersettings[playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1]].info.index
+      local _ = playersettings[playerlist[GUI_PLIST_LIST:GetValue() + 1]].info.index
     end
     return nil
   end,
   GetSelectedUserID = function()
     if #playerlist > 0 then
-      local _ = playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1]
+      local _ = playerlist[GUI_PLIST_LIST:GetValue() + 1]
     end
     return nil
   end
 }
-local selected_player = nil
+local selected_ctrl_mode = 0
+local selected_ctrl_openkey = 0
 callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
-  if not MENU:IsActive() then
+  if GUI_TAB_CTRL_OPENKEY:GetValue() == 0 and GUI_TAB_CTRL_MODE:GetValue() == 1 then
+    GUI_WINDOW:SetActive(MENU:IsActive())
+  end
+  if not MENU:IsActive() and (GUI_TAB_CTRL_MODE:GetValue() == 0 or (not GUI_WINDOW:IsActive() or GUI_TAB_CTRL_MODE:GetValue() ~= 0)) then
     return 
+  end
+  if GUI_TAB_CTRL_OPENKEY:GetValue() ~= selected_ctrl_openkey and GUI_TAB_CTRL_MODE:GetValue() == 1 then
+    selected_ctrl_openkey = GUI_TAB_CTRL_OPENKEY:GetValue()
+    GUI_WINDOW:SetOpenKey(selected_ctrl_openkey)
+  end
+  if GUI_TAB_CTRL_MODE:GetValue() ~= selected_ctrl_mode then
+    if GUI_TAB_CTRL_MODE:GetValue() == 0 then
+      GUI_PLIST:Remove()
+      GUI_PLIST_LIST:Remove()
+      GUI_PLIST_CLEAR:Remove()
+      GUI_PLIST = gui.Groupbox(GUI_TAB, "Select a player", GUI_PLIST_POS.x, GUI_PLIST_POS.y, GUI_PLIST_POS.w, GUI_PLIST_POS.h)
+      GUI_PLIST_LIST = gui.Listbox(GUI_PLIST, tostring(randomname) .. ".players", 440)
+      do
+        local _with_0 = gui.Button(GUI_PLIST, "Clear", function()
+          selected_player = nil
+          GUI_PLIST_LIST:SetOptions()
+          playersettings = { }
+          playerlist = { }
+        end)
+        _with_0:SetPosX(188)
+        _with_0:SetPosY(-42)
+        _with_0:SetWidth(80)
+        GUI_PLIST_CLEAR = _with_0
+      end
+      GUI_SET:Remove()
+      GUI_SET = gui.Groupbox(GUI_TAB, "Per Player Settings", GUI_SET_POS.x, GUI_SET_POS.y, GUI_SET_POS.w, GUI_SET_POS.h)
+      for guiobj_index = 1, #guiobjects do
+        guiobjects[guiobj_index].obj:Remove()
+        guiobjects[guiobj_index].obj = guiobjects[guiobj_index].recreate(GUI_SET)
+      end
+      GUI_TAB_CTRL_OPENKEY:SetDisabled(true)
+      GUI_WINDOW:SetActive(false)
+    else
+      GUI_PLIST:Remove()
+      GUI_PLIST_LIST:Remove()
+      GUI_PLIST_CLEAR:Remove()
+      GUI_PLIST = gui.Groupbox(GUI_WINDOW, "Select a player", 8, 8, 188, 584)
+      GUI_PLIST_LIST = gui.Listbox(GUI_PLIST, tostring(randomname) .. ".players", 494)
+      do
+        local _with_0 = gui.Button(GUI_PLIST, "Clear", function()
+          selected_player = nil
+          GUI_PLIST_LIST:SetOptions()
+          playersettings = { }
+          playerlist = { }
+        end)
+        _with_0:SetPosX(84)
+        _with_0:SetPosY(-42)
+        _with_0:SetWidth(80)
+        GUI_PLIST_CLEAR = _with_0
+      end
+      GUI_SET:Remove()
+      GUI_SET = gui.Groupbox(GUI_WINDOW, "Per Player Settings", 200, 8, 318, 584)
+      for guiobj_index = 1, #guiobjects do
+        guiobjects[guiobj_index].obj:Remove()
+        guiobjects[guiobj_index].obj = guiobjects[guiobj_index].recreate(GUI_SET)
+      end
+      GUI_TAB_CTRL_OPENKEY:SetDisabled(false)
+    end
+    selected_ctrl_mode = GUI_TAB_CTRL_MODE:GetValue()
+    selected_player = nil
+    GUI_PLIST_LIST:SetOptions(unpack((function()
+      local _accum_0 = { }
+      local _len_0 = 1
+      for _, v in ipairs(playerlist) do
+        _accum_0[_len_0] = playersettings[v].info.nickname
+        _len_0 = _len_0 + 1
+      end
+      return _accum_0
+    end)()))
   end
   if #playerlist == 0 then
     for _index_0 = 1, #guiobjects do
       local guiobj = guiobjects[_index_0]
-      guiobj:SetDisabled(true)
+      guiobj.obj:SetDisabled(true)
     end
     selected_player = nil
     return 
   elseif selected_player == nil then
     for _index_0 = 1, #guiobjects do
       local guiobj = guiobjects[_index_0]
-      guiobj:SetDisabled(false)
+      guiobj.obj:SetDisabled(false)
     end
   end
-  if selected_player ~= GUI_TAB_PLIST_LIST:GetValue() then
-    selected_player = GUI_TAB_PLIST_LIST:GetValue()
-    local set = playersettings[playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1]].settings
+  if selected_player ~= GUI_PLIST_LIST:GetValue() then
+    selected_player = GUI_PLIST_LIST:GetValue()
+    local set = playersettings[playerlist[GUI_PLIST_LIST:GetValue() + 1]].settings
     for varname, wrap in pairs(guisettings) do
       wrap.set(set[varname])
     end
   else
-    local set = playersettings[playerlist[GUI_TAB_PLIST_LIST:GetValue() + 1]].settings
+    local set = playersettings[playerlist[GUI_PLIST_LIST:GetValue() + 1]].settings
     for varname, wrap in pairs(guisettings) do
       set[varname] = wrap.get()
     end
   end
 end)
 local last_map = nil
+local last_server = nil
 callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd)
-  if engine.GetMapName() ~= last_map then
+  if engine.GetMapName() ~= last_map or engine.GetServerIP() ~= last_server then
     last_map = engine.GetMapName()
-    GUI_TAB_PLIST_LIST:SetOptions()
+    last_server = engine.GetServerIP()
+    selected_player = nil
+    GUI_PLIST_LIST:SetOptions()
     playersettings = { }
     playerlist = { }
   end
@@ -312,7 +563,7 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
       for varname, wrap in pairs(guisettings) do
         set[varname] = wrap.default
       end
-      GUI_TAB_PLIST_LIST:SetOptions(unpack((function()
+      GUI_PLIST_LIST:SetOptions(unpack((function()
         local _accum_0 = { }
         local _len_0 = 1
         for _, v in ipairs(playerlist) do
@@ -323,7 +574,7 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
       end)()))
     elseif playersettings[uid].info.nickname ~= player:GetName() then
       playersettings[uid].info.nickname = player:GetName()
-      GUI_TAB_PLIST_LIST:SetOptions(unpack((function()
+      GUI_PLIST_LIST:SetOptions(unpack((function()
         local _accum_0 = { }
         local _len_0 = 1
         for _, v in ipairs(playerlist) do
@@ -342,8 +593,8 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   if content == __version__ then
     return 
   end
-  local UPD_HEIGHT = 190
-  local UPDATE = gui.Groupbox(GUI_TAB, "Update Available", GUI_TAB_PLIST_POS.x, GUI_TAB_PLIST_POS.y, 618, UPD_HEIGHT)
+  local UPD_HEIGHT = 180
+  local UPDATE = gui.Groupbox(GUI_TAB, "Update Available", GUI_TAB_CTRL_POS.x, GUI_TAB_CTRL_POS.y + GUI_TAB_CTRL_POS.h, 618, UPD_HEIGHT)
   local text = gui.Text(UPDATE, "Current version: " .. tostring(__version__) .. "\nLatest version: " .. tostring(content))
   local minified = gui.Checkbox(UPDATE, "updater.minified", "Download minified version", true)
   local btn
@@ -384,17 +635,19 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
     _with_0:SetPosX(300)
     _with_0:SetPosY(78)
   end
-  GUI_TAB_PLIST_POS.y = GUI_TAB_PLIST_POS.y + UPD_HEIGHT
-  GUI_TAB_PLIST:SetPosY(GUI_TAB_PLIST_POS.y)
-  GUI_TAB_SET_POS.y = GUI_TAB_SET_POS.y + UPD_HEIGHT
-  return GUI_TAB_SET:SetPosY(GUI_TAB_SET_POS.y)
+  GUI_PLIST_POS.y = GUI_PLIST_POS.y + UPD_HEIGHT
+  GUI_PLIST:SetPosY(GUI_PLIST_POS.y)
+  GUI_SET_POS.y = GUI_SET_POS.y + UPD_HEIGHT
+  if GUI_TAB_CTRL_MODE:GetValue() == 0 then
+    return GUI_SET:SetPosY(GUI_SET_POS.y)
+  end
 end)
 do
   local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "On", "Off", "Manual (LBY Override)")
   _with_0:SetDescription("Choose a resolver for this player.")
 end
 do
-  local _with_0 = plist.gui.Slider("resolver.lby_override", "LBY Override Value", 0, -180, 180)
+  local _with_0 = plist.gui.Slider("resolver.lby_override", "LBY Override Value", 0, -58, 58)
   _with_0:SetDescription("The LBY value for resolving when using manual resolver.")
 end
 callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", function(entity)
@@ -409,7 +662,6 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
   end
 end)
 callbacks.Register("CreateMove", "playerlist.extensions.Resolver.CreateMove", function(cmd)
-  local localplayer = entities.GetLocalPlayer()
   local _list_0 = entities.FindByClass("CCSPlayer")
   for _index_0 = 1, #_list_0 do
     local _continue_0 = false
@@ -511,7 +763,7 @@ end)
 local fbsp_force = plist.gui.Multibox("Force ...")
 do
   local _with_0 = plist.gui.Multibox_Checkbox(fbsp_force, "force.baim", "BAIM", false)
-  _with_0:SetDescription("Set's bodyaim to priority.")
+  _with_0:SetDescription("Sets bodyaim to priority.")
 end
 do
   local _with_0 = plist.gui.Multibox_Checkbox(fbsp_force, "force.safepoint", "Safepoint", false)
@@ -651,18 +903,129 @@ callbacks.Register("FireGameEvent", "playerlist.extensions.FBSP.FireGameEvent", 
     end
   end
 end)
+local ppe_options = plist.gui.Multibox("ESP Options")
+local ppe_options_box
 do
-  local _with_0 = plist.gui.Checkbox("esp", "ESP", false)
-  _with_0:SetDescription("Basic Box ESP.")
+  local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.box", "Box", false)
+  _with_0:SetDescription("Draw box around entity.")
+  ppe_options_box = _with_0
 end
+plist.gui.Multibox_ColorPicker(ppe_options_box, "esp.box.clr", "Box Color", 0xFF, 0x00, 0x00, 0xFF)
+local ppe_options_chams
+do
+  local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.chams", "Chams", false)
+  _with_0:SetDescription("Draw chams onto the model. Colors are: visible / invisible")
+  ppe_options_chams = _with_0
+end
+plist.gui.Multibox_ColorPicker(ppe_options_chams, "esp.chams.invclr", "Invisible Color", 0xFF, 0xFF, 0x00, 0xFF)
+plist.gui.Multibox_ColorPicker(ppe_options_chams, "esp.chams.visclr", "Visible Color", 0x00, 0xFF, 0x00, 0xFF)
+do
+  local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.name", "Name", false)
+  _with_0:SetDescription("Draw entity name.")
+end
+do
+  local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.healthbar", "Healthbar", false)
+  _with_0:SetDescription("Draw entity healthbar.")
+end
+do
+  local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.ammo", "Ammo", false)
+  _with_0:SetDescription("Draw amount of money left in weapon.")
+end
+local ppe_magsize = {
+  weapon_glock = 20,
+  weapon_usp_silencer = 12,
+  weapon_hkp2000 = 13,
+  weapon_revolver = 8,
+  weapon_cz75a = 12,
+  weapon_deagle = 7,
+  weapon_elite = 30,
+  weapon_fiveseven = 20,
+  weapon_p250 = 13,
+  weapon_tec9 = 18,
+  weapon_mac10 = 30,
+  weapon_mp7 = 30,
+  weapon_mp9 = 30,
+  weapon_mp5sd = 30,
+  weapon_bizon = 64,
+  weapon_p90 = 50,
+  weapon_ump45 = 25,
+  weapon_mag7 = 5,
+  weapon_nova = 8,
+  weapon_sawedoff = 8,
+  weapon_xn1014 = 7,
+  weapon_m249 = 100,
+  weapon_negev = 150,
+  weapon_ak47 = 30,
+  weapon_aug = 30,
+  weapon_famas = 25,
+  weapon_galilar = 35,
+  weapon_m4a1_silencer = 25,
+  weapon_m4a1 = 30,
+  weapon_sg556 = 30,
+  weapon_ssg08 = 10,
+  weapon_scar20 = 20,
+  weapon_gs3sg1 = 20,
+  weapon_awp = 10
+}
 callbacks.Register("DrawESP", "playerlist.extensions.PPE.DrawESP", function(builder)
   local player = builder:GetEntity()
   if not player:IsPlayer() then
     return 
   end
-  if plist.GetByIndex(player:GetIndex()).get("esp") then
-    draw.Color(0x80, 0x80, 0x80, 0xFF)
-    return draw.OutlinedRect(builder:GetRect())
+  local set = plist.GetByIndex(player:GetIndex())
+  if set.get("esp.box") then
+    draw.Color(unpack(set.get("esp.box.clr")))
+    draw.OutlinedRect(builder:GetRect())
+  end
+  if set.get("esp.name") then
+    builder:AddTextTop(player:GetName())
+  end
+  if set.get("esp.healthbar") then
+    builder:AddBarLeft(player:GetHealth() / 100, player:GetHealth())
+  end
+  if set.get("esp.ammo") then
+    local weapon = player:GetPropEntity("m_hActiveWeapon")
+    if weapon then
+      local ammoClip = weapon:GetProp("m_iClip1")
+      if ammoClip >= 0 then
+        if ppe_magsize[tostring(weapon)] == nil then
+          print("[Player List] [WARNING] Unknow weapon: " .. tostring(weapon))
+          ppe_magsize[tostring(weapon)] = ammoClip
+        end
+        return builder:AddBarBottom(ammoClip / ppe_magsize[tostring(weapon)], ammoClip)
+      end
+    end
+  end
+end)
+local ppe_chams_materials = { }
+local ppe_chams_GetMat
+ppe_chams_GetMat = function(color, visible)
+  if ppe_chams_materials[color] then
+    return ppe_chams_materials[color]
+  end
+  local vmt = ([[        "VertexLitGeneric" {
+        "$basetexture" "vgui/white_additive"
+        "$color" "[%s %s %s]"
+        "$alpha" "%s"
+        "$ignorez" "%s"
+    }]]):format(color[1] / 255, color[2] / 255, color[3] / 255, color[4] / 255, visible)
+  ppe_chams_materials[color] = materials.Create("Chams", vmt)
+  return ppe_chams_materials[color]
+end
+callbacks.Register("DrawModel", "playerlist.extensions.PPE.DrawModel", function(builder)
+  local player = builder:GetEntity()
+  if not player or not player:IsPlayer() then
+    return 
+  end
+  local set = plist.GetByIndex(player:GetIndex())
+  if set.get("esp.chams") then
+    if set.get("esp.chams.invclr")[4] > 0 then
+      builder:ForcedMaterialOverride(ppe_chams_GetMat(set.get("esp.chams.invclr"), 1))
+      builder:DrawExtraPass()
+    end
+    if set.get("esp.chams.visclr")[4] > 0 then
+      return builder:ForcedMaterialOverride(ppe_chams_GetMat(set.get("esp.chams.visclr"), 0))
+    end
   end
 end)
 
