@@ -1018,7 +1018,12 @@ ppe_chams_GetMat = function(color, visible)
   if ppe_chams_materials[name] then
     return ppe_chams_materials[name]
   end
-  local vmt = "\n        'VertexLitGeneric' {\n        '$basetexture' 'vgui/white_additive'\n        '$color' '[" .. tostring(color[1] / 255) .. " " .. tostring(color[2] / 255) .. " " .. tostring(color[3] / 255) .. "]'\n        '$alpha' '" .. tostring(color[4] / 255) .. "'\n        '$ignorez' '" .. tostring(visible) .. "'\n    }"
+  local vmt = ([[        "VertexLitGeneric" {
+        "$basetexture" "vgui/white_additive"
+        "$color" "[%s %s %s]"
+        "$alpha" "%s"
+        "$ignorez" "%s"
+    }]]):format(color[1] / 255, color[2] / 255, color[3] / 255, color[4] / 255, visible)
   ppe_chams_materials[name] = materials.Create("Chams", vmt)
   return ppe_chams_materials[name]
 end

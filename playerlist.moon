@@ -709,13 +709,13 @@ ppe_chams_GetMat = (color, visible) ->
     if ppe_chams_materials[ name ]
         return ppe_chams_materials[ name ]
 
-    vmt = "
-        'VertexLitGeneric' {
-        '$basetexture' 'vgui/white_additive'
-        '$color' '[#{color[ 1 ] / 255} #{color[ 2 ] / 255} #{color[ 3 ] / 255}]'
-        '$alpha' '#{color[ 4 ] / 255}'
-        '$ignorez' '#{visible}'
-    }"
+    vmt = [[
+        "VertexLitGeneric" {
+        "$basetexture" "vgui/white_additive"
+        "$color" "[%s %s %s]"
+        "$alpha" "%s"
+        "$ignorez" "%s"
+    }]]\format color[ 1 ] / 255, color[ 2 ] / 255, color[ 3 ] / 255, color[ 4 ] / 255, visible
 
     ppe_chams_materials[ name ] = materials.Create "Chams", vmt
     ppe_chams_materials[ name ]

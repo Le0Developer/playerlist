@@ -55,5 +55,5 @@
 
 ## Version 1.2.1
   - Fixed crash after a while of using per player chams (caching of materials failed)
-  - Clicking on "Open Changelog" in updater will now jump to the version
-  - Made changes to the code to make the minified version a one-liner again
+  - Clicking on "Open Changelog" in updater will now jump to the latest version
+  
