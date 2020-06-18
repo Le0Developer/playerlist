@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.1"
+local __version__ = "1.2.2"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -432,6 +432,16 @@ plist = {
 }
 local selected_ctrl_mode = 0
 local selected_ctrl_openkey = 0
+local teamname
+teamname = function(other)
+  if other == 1 then
+    return "SPECTATOR"
+  elseif other == 2 then
+    return "T"
+  else
+    return "CT"
+  end
+end
 callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
   if GUI_TAB_CTRL_OPENKEY:GetValue() == 0 and GUI_TAB_CTRL_MODE:GetValue() == 1 then
     GUI_WINDOW:SetActive(MENU:IsActive())
@@ -502,7 +512,7 @@ callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
       local _accum_0 = { }
       local _len_0 = 1
       for _, v in ipairs(playerlist) do
-        _accum_0[_len_0] = playersettings[v].info.nickname
+        _accum_0[_len_0] = "[" .. teamname(playersettings[v].info.team) .. "] " .. playersettings[v].info.nickname
         _len_0 = _len_0 + 1
       end
       return _accum_0
@@ -545,44 +555,70 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
     playersettings = { }
     playerlist = { }
   end
+  local myteam = entities.GetLocalPlayer():GetProp("m_iPendingTeamNum")
   local _list_0 = entities.FindByClass("CCSPlayer")
   for _index_0 = 1, #_list_0 do
-    local player = _list_0[_index_0]
-    local uid = client.GetPlayerInfo(player:GetIndex())["UserID"]
-    if playersettings[uid] == nil then
-      table.insert(playerlist, uid)
-      playersettings[uid] = {
-        info = {
-          nickname = player:GetName(),
-          uid = uid,
-          index = player:GetIndex()
-        },
-        settings = { }
-      }
-      local set = playersettings[uid].settings
-      for varname, wrap in pairs(guisettings) do
-        set[varname] = wrap.default
+    local _continue_0 = false
+    repeat
+      local player = _list_0[_index_0]
+      if client.GetPlayerInfo(player:GetIndex())["IsGOTV"] then
+        _continue_0 = true
+        break
       end
-      GUI_PLIST_LIST:SetOptions(unpack((function()
-        local _accum_0 = { }
-        local _len_0 = 1
-        for _, v in ipairs(playerlist) do
-          _accum_0[_len_0] = playersettings[v].info.nickname
-          _len_0 = _len_0 + 1
+      local uid = client.GetPlayerInfo(player:GetIndex())["UserID"]
+      if playersettings[uid] == nil then
+        table.insert(playerlist, uid)
+        playersettings[uid] = {
+          info = {
+            nickname = player:GetName(),
+            uid = uid,
+            index = player:GetIndex(),
+            team = player:GetProp("m_iPendingTeamNum")
+          },
+          settings = { }
+        }
+        local set = playersettings[uid].settings
+        for varname, wrap in pairs(guisettings) do
+          set[varname] = wrap.default
         end
-        return _accum_0
-      end)()))
-    elseif playersettings[uid].info.nickname ~= player:GetName() then
-      playersettings[uid].info.nickname = player:GetName()
-      GUI_PLIST_LIST:SetOptions(unpack((function()
-        local _accum_0 = { }
-        local _len_0 = 1
-        for _, v in ipairs(playerlist) do
-          _accum_0[_len_0] = playersettings[v].info.nickname
-          _len_0 = _len_0 + 1
-        end
-        return _accum_0
-      end)()))
+        GUI_PLIST_LIST:SetOptions(unpack((function()
+          local _accum_0 = { }
+          local _len_0 = 1
+          for _, v in ipairs(playerlist) do
+            _accum_0[_len_0] = "[" .. teamname(playersettings[v].info.team) .. "] " .. playersettings[v].info.nickname
+            _len_0 = _len_0 + 1
+          end
+          return _accum_0
+        end)()))
+      end
+      if playersettings[uid].info.nickname ~= player:GetName() then
+        playersettings[uid].info.nickname = player:GetName()
+        GUI_PLIST_LIST:SetOptions(unpack((function()
+          local _accum_0 = { }
+          local _len_0 = 1
+          for _, v in ipairs(playerlist) do
+            _accum_0[_len_0] = "[" .. teamname(playersettings[v].info.team) .. "] " .. playersettings[v].info.nickname
+            _len_0 = _len_0 + 1
+          end
+          return _accum_0
+        end)()))
+      end
+      if playersettings[uid].info.team ~= player:GetProp("m_iPendingTeamNum") then
+        playersettings[uid].info.nickname = player:GetProp("m_iPendingTeamNum")
+        GUI_PLIST_LIST:SetOptions(unpack((function()
+          local _accum_0 = { }
+          local _len_0 = 1
+          for _, v in ipairs(playerlist) do
+            _accum_0[_len_0] = "[" .. teamname(playersettings[v].info.team) .. "] " .. playersettings[v].info.nickname
+            _len_0 = _len_0 + 1
+          end
+          return _accum_0
+        end)()))
+      end
+      _continue_0 = true
+    until true
+    if not _continue_0 then
+      break
     end
   end
 end)

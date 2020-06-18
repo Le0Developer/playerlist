@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -318,6 +318,10 @@ export plist = {
 
 selected_ctrl_mode = 0
 selected_ctrl_openkey = 0
+teamname = (other) ->
+    if other == 1 then "SPECTATOR"
+    elseif other == 2 then "T"
+    else "CT"
 callbacks.Register "Draw", "playerlist.callbacks.Draw", ->
     if GUI_TAB_CTRL_OPENKEY\GetValue! == 0 and GUI_TAB_CTRL_MODE\GetValue! == 1
         GUI_WINDOW\SetActive MENU\IsActive!
@@ -380,7 +384,7 @@ callbacks.Register "Draw", "playerlist.callbacks.Draw", ->
 
         selected_ctrl_mode = GUI_TAB_CTRL_MODE\GetValue!
         selected_player = nil -- reset to reload settings
-        GUI_PLIST_LIST\SetOptions unpack [playersettings[ v ].info.nickname for _, v in ipairs playerlist]
+        GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
     if #playerlist == 0
         for guiobj in *guiobjects
@@ -413,7 +417,9 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
         playersettings = {}
         playerlist = {}
 
+    myteam = entities.GetLocalPlayer!\GetProp "m_iPendingTeamNum"
     for player in *entities.FindByClass"CCSPlayer"
+        continue if client.GetPlayerInfo( player\GetIndex! )[ "IsGOTV" ]
         uid = client.GetPlayerInfo( player\GetIndex! )[ "UserID" ]
         if playersettings[ uid ] == nil -- never seen the player
             table.insert playerlist, uid
@@ -422,6 +428,7 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
                     nickname: player\GetName!
                     uid: uid
                     index: player\GetIndex!
+                    team: player\GetProp "m_iPendingTeamNum"
                 }
                 settings: {}
             }
@@ -429,11 +436,15 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             for varname, wrap in pairs guisettings
                 set[ varname ] = wrap.default
 
-            GUI_PLIST_LIST\SetOptions unpack [playersettings[ v ].info.nickname for _, v in ipairs playerlist]
+            GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
-        elseif playersettings[ uid ].info.nickname != player\GetName! -- changed name
+        if playersettings[ uid ].info.nickname != player\GetName! -- changed name
             playersettings[ uid ].info.nickname = player\GetName!
-            GUI_PLIST_LIST\SetOptions unpack [playersettings[ v ].info.nickname for _, v in ipairs playerlist]
+            GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
+
+        if playersettings[ uid ].info.team != player\GetProp "m_iPendingTeamNum" -- changed team
+            playersettings[ uid ].info.nickname = player\GetProp "m_iPendingTeamNum"
+            GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
 -- updater
 http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/version", (content) ->
