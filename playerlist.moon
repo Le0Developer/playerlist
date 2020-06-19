@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.2"
+__version__ = "1.2.2-pre1"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -417,7 +417,6 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
         playersettings = {}
         playerlist = {}
 
-    myteam = entities.GetLocalPlayer!\GetProp "m_iPendingTeamNum"
     for player in *entities.FindByClass"CCSPlayer"
         continue if client.GetPlayerInfo( player\GetIndex! )[ "IsGOTV" ]
         uid = client.GetPlayerInfo( player\GetIndex! )[ "UserID" ]
@@ -443,7 +442,7 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
         if playersettings[ uid ].info.team != player\GetProp "m_iPendingTeamNum" -- changed team
-            playersettings[ uid ].info.nickname = player\GetProp "m_iPendingTeamNum"
+            playersettings[ uid ].info.team = player\GetProp "m_iPendingTeamNum"
             GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
 -- updater

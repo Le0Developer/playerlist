@@ -57,6 +57,6 @@
   - Fixed crash after a while of using per player chams (caching of materials failed)
   - Clicking on "Open Changelog" in updater will now jump to the latest version
 
-## Version 1.2.2-pre0
+## Version 1.2.2-pre1
   - Added a [T] / [CT] prefix for players
   - Removed GOTV from list

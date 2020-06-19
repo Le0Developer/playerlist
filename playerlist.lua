@@ -555,7 +555,6 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
     playersettings = { }
     playerlist = { }
   end
-  local myteam = entities.GetLocalPlayer():GetProp("m_iPendingTeamNum")
   local _list_0 = entities.FindByClass("CCSPlayer")
   for _index_0 = 1, #_list_0 do
     local _continue_0 = false
@@ -604,7 +603,7 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
         end)()))
       end
       if playersettings[uid].info.team ~= player:GetProp("m_iPendingTeamNum") then
-        playersettings[uid].info.nickname = player:GetProp("m_iPendingTeamNum")
+        playersettings[uid].info.team = player:GetProp("m_iPendingTeamNum")
         GUI_PLIST_LIST:SetOptions(unpack((function()
           local _accum_0 = { }
           local _len_0 = 1
