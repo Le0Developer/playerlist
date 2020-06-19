@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.2-pre1"
+__version__ = "1.2.2-pre2"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -286,7 +286,7 @@ export plist = {
         Remove: ( object ) ->
             object\Remove!
             for varname, info in pairs guisettings
-                if info.obj == object -- found matching varname
+                if info.obj == object.obj -- found matching varname
                     guisettings[ varname ] = nil -- remove object from varnames
                     for _, set in pairs playersettings
                         set.settings[ varname ] = nil -- remove object from all players

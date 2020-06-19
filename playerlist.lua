@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.2"
+local __version__ = "1.2.2-pre2"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -387,7 +387,7 @@ plist = {
     Remove = function(object)
       object:Remove()
       for varname, info in pairs(guisettings) do
-        if info.obj == object then
+        if info.obj == object.obj then
           guisettings[varname] = nil
           for _, set in pairs(playersettings) do
             set.settings[varname] = nil
