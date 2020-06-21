@@ -57,7 +57,9 @@
   - Fixed crash after a while of using per player chams (caching of materials failed)
   - Clicking on "Open Changelog" in updater will now jump to the latest version
 
-## Version 1.2.2-pre2
+## Version 1.2.2
   - Added a [T] / [CT] prefix for players
   - Removed GOTV from list
   - Fixed bug in `plist.gui.Remove`
+  - Fixed bug with function in gui objects returned by `plist.gui.X` not starting with `Set`
+  - Fixed ammo esp with zeus

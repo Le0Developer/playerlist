@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.2-pre2"
+__version__ = "1.2.2"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -72,7 +72,8 @@ PreservingGUIObject = (obj, recreate) ->
                 return (...) =>
                     modifiers[ varname ] = {...}
                     public.obj[ varname ]( public.obj, ... )
-            public.obj[ varname ]
+            (...) => 
+                public.obj[ varname ]( public.obj, ... )
     }
     public
 
@@ -688,6 +689,8 @@ ppe_magsize = { -- is there an easier way to get the magsize?
     weapon_ak47: 30, weapon_aug: 30, weapon_famas: 25, weapon_galilar: 35, weapon_m4a1_silencer: 25, weapon_m4a1: 30, weapon_sg556: 30
     -- snipers
     weapon_ssg08: 10, weapon_scar20: 20, weapon_gs3sg1: 20, weapon_awp: 10
+    -- zeus
+    weapon_taser: 1
 }
 callbacks.Register "DrawESP", "playerlist.extensions.PPE.DrawESP", (builder) ->
     player = builder\GetEntity!

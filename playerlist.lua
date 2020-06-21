@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.2-pre2"
+local __version__ = "1.2.2"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -105,7 +105,9 @@ PreservingGUIObject = function(obj, recreate)
           return public.obj[varname](public.obj, ...)
         end
       end
-      return public.obj[varname]
+      return function(self, ...)
+        return public.obj[varname](public.obj, ...)
+      end
     end
   })
   return public
@@ -1014,7 +1016,8 @@ local ppe_magsize = {
   weapon_ssg08 = 10,
   weapon_scar20 = 20,
   weapon_gs3sg1 = 20,
-  weapon_awp = 10
+  weapon_awp = 10,
+  weapon_taser = 1
 }
 callbacks.Register("DrawESP", "playerlist.extensions.PPE.DrawESP", function(builder)
   local player = builder:GetEntity()
