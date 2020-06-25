@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.2"
+local __version__ = "1.2.3-pre0"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -400,11 +400,17 @@ plist = {
     end
   },
   GetByUserID = function(userid)
+    if not playersettings[userid] then
+      error("Playerlist: No settings for userid: " .. tostring(userid), 2)
+    end
     return settings_wrapper(playersettings[userid])
   end,
   GetByIndex = function(index)
     local pinfo = client.GetPlayerInfo(index)
     if pinfo ~= nil then
+      if not playersettings[pinfo["UserID"]] then
+        error("Playerlist: No settings for index: " .. tostring(index), 2)
+      end
       return settings_wrapper(playersettings[pinfo["UserID"]])
     end
     for _, info in pairs(playersettings) do
@@ -482,6 +488,7 @@ callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
       end
       GUI_TAB_CTRL_OPENKEY:SetDisabled(true)
       GUI_WINDOW:SetActive(false)
+      GUI_WINDOW:SetOpenKey(0)
     else
       GUI_PLIST:Remove()
       GUI_PLIST_LIST:Remove()
@@ -507,6 +514,7 @@ callbacks.Register("Draw", "playerlist.callbacks.Draw", function()
         guiobjects[guiobj_index].obj = guiobjects[guiobj_index].recreate(GUI_SET)
       end
       GUI_TAB_CTRL_OPENKEY:SetDisabled(false)
+      GUI_WINDOW:SetOpenKey(GUI_TAB_CTRL_OPENKEY:GetValue())
     end
     selected_ctrl_mode = GUI_TAB_CTRL_MODE:GetValue()
     selected_player = nil
@@ -582,6 +590,7 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
         for varname, wrap in pairs(guisettings) do
           set[varname] = wrap.default
         end
+        selected_player = nil
         GUI_PLIST_LIST:SetOptions(unpack((function()
           local _accum_0 = { }
           local _len_0 = 1
@@ -694,7 +703,7 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   end
 end)
 do
-  local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "On", "Off", "Manual (LBY Override)")
+  local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "Automatic", "On", "Off", "Manual (LBY Override)")
   _with_0:SetDescription("Choose a resolver for this player.")
 end
 do
@@ -707,6 +716,14 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
   end
   local set = plist.GetByIndex(entity:GetIndex())
   if set.get("resolver.type") == 0 then
+    if entity:GetPropVector("m_angEyeAngles").x >= 85 then
+      return gui.SetValue("rbot.accuracy.posadj.resolver", true)
+    elseif math.abs((entity:GetProp("m_flLowerBodyYawTarget") - entity:GetProp("m_angEyeAngles").y + 180) % 360 - 180) > 29 then
+      return gui.SetValue("rbot.accuracy.posadj.resolver", true)
+    else
+      return gui.SetValue("rbot.accuracy.posadj.resolver", false)
+    end
+  elseif set.get("resolver.type") == 1 then
     return gui.SetValue("rbot.accuracy.posadj.resolver", true)
   else
     return gui.SetValue("rbot.accuracy.posadj.resolver", false)
@@ -723,7 +740,7 @@ callbacks.Register("CreateMove", "playerlist.extensions.Resolver.CreateMove", fu
         break
       end
       local set = plist.GetByIndex(player:GetIndex())
-      if set.get("resolver.type") == 2 then
+      if set.get("resolver.type") == 3 then
         player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles").y + set.get("resolver.lby_override") + 180) % 360 - 180)
       end
       _continue_0 = true
@@ -970,18 +987,27 @@ do
 end
 plist.gui.Multibox_ColorPicker(ppe_options_chams, "esp.chams.invclr", "Invisible Color", 0xFF, 0xFF, 0x00, 0xFF)
 plist.gui.Multibox_ColorPicker(ppe_options_chams, "esp.chams.visclr", "Visible Color", 0x00, 0xFF, 0x00, 0xFF)
+local ppe_options_name
 do
   local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.name", "Name", false)
   _with_0:SetDescription("Draw entity name.")
+  ppe_options_name = _with_0
 end
+plist.gui.Multibox_ColorPicker(ppe_options_name, "esp.name.clr", "Color", 0xFF, 0xFF, 0xFF, 0xFF)
+local ppe_options_healthbar
 do
   local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.healthbar", "Healthbar", false)
-  _with_0:SetDescription("Draw entity healthbar.")
+  _with_0:SetDescription("Draw entity healthbar. 0% alpha = health based")
+  ppe_options_healthbar = _with_0
 end
+plist.gui.Multibox_ColorPicker(ppe_options_healthbar, "esp.healthbar.clr", "Color", 0x00, 0x00, 0x00, 0x00)
+local ppe_options_ammo
 do
   local _with_0 = plist.gui.Multibox_Checkbox(ppe_options, "esp.ammo", "Ammo", false)
   _with_0:SetDescription("Draw amount of money left in weapon.")
+  ppe_options_ammo = _with_0
 end
+plist.gui.Multibox_ColorPicker(ppe_options_ammo, "esp.ammo.clr", "Color", 0xFF, 0xFF, 0xFF, 0xFF)
 local ppe_magsize = {
   weapon_glock = 20,
   weapon_usp_silencer = 12,
@@ -1030,10 +1056,17 @@ callbacks.Register("DrawESP", "playerlist.extensions.PPE.DrawESP", function(buil
     draw.OutlinedRect(builder:GetRect())
   end
   if set.get("esp.name") then
+    builder:Color(unpack(set.get("esp.name.clr")))
     builder:AddTextTop(player:GetName())
   end
   if set.get("esp.healthbar") then
-    builder:AddBarLeft(player:GetHealth() / 100, player:GetHealth())
+    local p = player:GetHealth() / player:GetMaxHealth()
+    if set.get("esp.healthbar.clr")[4] == 0x00 then
+      builder:Color(0xFF - 0xFF * p, 0xFF * p, 0x00, 0xFF)
+    else
+      builder:Color(unpack(set.get("esp.healthbar.clr")))
+    end
+    builder:AddBarLeft(p, player:GetHealth())
   end
   if set.get("esp.ammo") then
     local weapon = player:GetPropEntity("m_hActiveWeapon")
@@ -1044,6 +1077,7 @@ callbacks.Register("DrawESP", "playerlist.extensions.PPE.DrawESP", function(buil
           print("[Player List] [WARNING] Unknow weapon: " .. tostring(weapon))
           ppe_magsize[tostring(weapon)] = ammoClip
         end
+        builder:Color(unpack(set.get("esp.ammo.clr")))
         return builder:AddBarBottom(ammoClip / ppe_magsize[tostring(weapon)], ammoClip)
       end
     end
@@ -1078,6 +1112,30 @@ callbacks.Register("DrawModel", "playerlist.extensions.PPE.DrawModel", function(
     end
     if set.get("esp.chams.visclr")[4] > 0 then
       return builder:ForcedMaterialOverride(ppe_chams_GetMat(set.get("esp.chams.visclr"), 0))
+    end
+  end
+end)
+do
+  local _with_0 = plist.gui.Checkbox("reveal_on_radar", "Reveal on Radar", false)
+  _with_0:SetDescription("Reveal player on radar.")
+end
+callbacks.Register("CreateMove", "playerlist.extensions.ROR.CreateMove", function(usercmd)
+  local lp = entities.GetLocalPlayer()
+  local _list_0 = entities.FindByClass("CCSPlayer")
+  for _index_0 = 1, #_list_0 do
+    local _continue_0 = false
+    repeat
+      local player = _list_0[_index_0]
+      if not player:IsAlive() then
+        _continue_0 = true
+        break
+      end
+      local set = plist.GetByIndex(player:GetIndex())
+      player:SetProp("m_bSpotted", set.get("reveal_on_radar" and 1 or 0))
+      _continue_0 = true
+    until true
+    if not _continue_0 then
+      break
     end
   end
 end)

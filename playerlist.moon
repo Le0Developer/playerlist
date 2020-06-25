@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.2"
+__version__ = "1.2.3-pre0"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -294,10 +294,15 @@ export plist = {
                     break -- only one can match, so we quit
 
     }
-    GetByUserID: (userid) -> settings_wrapper playersettings[ userid ]
+    GetByUserID: (userid) ->
+        if not playersettings[ userid ]
+            error "Playerlist: No settings for userid: #{userid}", 2
+        settings_wrapper playersettings[ userid ]
     GetByIndex: (index) ->
         pinfo = client.GetPlayerInfo index
-        if pinfo != nil
+        if pinfo != nil -- is on server
+            if not playersettings[ pinfo[ "UserID" ] ]
+                error "Playerlist: No settings for index: #{index}", 2
             return settings_wrapper playersettings[ pinfo[ "UserID" ] ]
 
         for _, info in pairs playersettings
@@ -358,6 +363,7 @@ callbacks.Register "Draw", "playerlist.callbacks.Draw", ->
             
             GUI_TAB_CTRL_OPENKEY\SetDisabled true
             GUI_WINDOW\SetActive false
+            GUI_WINDOW\SetOpenKey 0
         else -- tab > window
             GUI_PLIST\Remove!
             GUI_PLIST_LIST\Remove!
@@ -382,6 +388,7 @@ callbacks.Register "Draw", "playerlist.callbacks.Draw", ->
                 guiobjects[ guiobj_index ].obj = guiobjects[ guiobj_index ].recreate GUI_SET
             
             GUI_TAB_CTRL_OPENKEY\SetDisabled false
+            GUI_WINDOW\SetOpenKey GUI_TAB_CTRL_OPENKEY\GetValue!
 
         selected_ctrl_mode = GUI_TAB_CTRL_MODE\GetValue!
         selected_player = nil -- reset to reload settings
@@ -436,6 +443,7 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             for varname, wrap in pairs guisettings
                 set[ varname ] = wrap.default
 
+            selected_player = nil -- order changed, so we have to load the information from the new player, or we'll overwrite their info
             GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
         if playersettings[ uid ].info.nickname != player\GetName! -- changed name
@@ -490,15 +498,23 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
         GUI_SET\SetPosY GUI_SET_POS.y
 
 -- resolver extension
-with plist.gui.Combobox "resolver.type", "Resolver", "On", "Off", "Manual (LBY Override)"
+with plist.gui.Combobox "resolver.type", "Resolver", "Automatic", "On", "Off", "Manual (LBY Override)"
     \SetDescription "Choose a resolver for this player."
 with plist.gui.Slider "resolver.lby_override", "LBY Override Value", 0, -58, 58
     \SetDescription "The LBY value for resolving when using manual resolver."
 
+
 callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", (entity) ->
-    if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
+    if not entity\GetIndex! then return
     set = plist.GetByIndex entity\GetIndex!
     if set.get"resolver.type" == 0
+        if entity\GetPropVector"m_angEyeAngles".x >= 85 -- check if enemy is looking down
+            gui.SetValue "rbot.accuracy.posadj.resolver", true
+        elseif math.abs( (entity\GetProp"m_flLowerBodyYawTarget" - entity\GetProp"m_angEyeAngles".y + 180) % 360 - 180 ) > 29 -- check if lby delta is a bit too high
+            gui.SetValue "rbot.accuracy.posadj.resolver", true
+        else
+            gui.SetValue "rbot.accuracy.posadj.resolver", false
+    elseif set.get"resolver.type" == 1
         gui.SetValue "rbot.accuracy.posadj.resolver", true
     else
         gui.SetValue "rbot.accuracy.posadj.resolver", false
@@ -509,14 +525,14 @@ callbacks.Register "CreateMove", "playerlist.extensions.Resolver.CreateMove", (c
             continue
         
         set = plist.GetByIndex player\GetIndex!
-        if set.get"resolver.type" == 2
+        if set.get"resolver.type" == 3
             player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"resolver.lby_override" + 180) % 360 - 180
 
 -- player priority extension
 priority_targetted_entity = nil
 priority_targetting_priority = false
 callbacks.Register "AimbotTarget", "playerlist.extensions.Priority.AimbotTarget", (entity) ->
-    if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
+    if not entity\GetIndex! then return
 	if priority_targetted_entity and entity\GetIndex! != priority_targetted_entity\GetIndex!
 		if priority_targetting_priority
 			-- reset lock cuz we're attacking someone else
@@ -631,7 +647,7 @@ fbsp_sp_undo = ->
 
 fbsp_targetted_enemy = nil
 callbacks.Register "AimbotTarget", "playerlist.extensions.FBSP.AimbotTarget", (entity) ->
-    if not entity\GetIndex! then return -- idk why, but it sometimes just returns "nil"
+    if not entity\GetIndex! then return
 
     fbsp_targetted_enemy = entity
     
@@ -668,14 +684,17 @@ ppe_options_chams = with plist.gui.Multibox_Checkbox ppe_options, "esp.chams", "
 plist.gui.Multibox_ColorPicker ppe_options_chams, "esp.chams.invclr", "Invisible Color", 0xFF, 0xFF, 0x00, 0xFF
 plist.gui.Multibox_ColorPicker ppe_options_chams, "esp.chams.visclr", "Visible Color", 0x00, 0xFF, 0x00, 0xFF
 
-with plist.gui.Multibox_Checkbox ppe_options, "esp.name", "Name", false
+ppe_options_name = with plist.gui.Multibox_Checkbox ppe_options, "esp.name", "Name", false
     \SetDescription "Draw entity name."
+plist.gui.Multibox_ColorPicker ppe_options_name, "esp.name.clr", "Color", 0xFF, 0xFF, 0xFF, 0xFF
 
-with plist.gui.Multibox_Checkbox ppe_options, "esp.healthbar", "Healthbar", false
-    \SetDescription "Draw entity healthbar."
+ppe_options_healthbar = with plist.gui.Multibox_Checkbox ppe_options, "esp.healthbar", "Healthbar", false
+    \SetDescription "Draw entity healthbar. 0% alpha = health based"
+plist.gui.Multibox_ColorPicker ppe_options_healthbar, "esp.healthbar.clr", "Color", 0x00, 0x00, 0x00, 0x00
 
-with plist.gui.Multibox_Checkbox ppe_options, "esp.ammo", "Ammo", false
+ppe_options_ammo = with plist.gui.Multibox_Checkbox ppe_options, "esp.ammo", "Ammo", false
     \SetDescription "Draw amount of money left in weapon."
+plist.gui.Multibox_ColorPicker ppe_options_ammo, "esp.ammo.clr", "Color", 0xFF, 0xFF, 0xFF, 0xFF
 
 -- a bit copy pasta from https://aimware.net/forum/thread/109067 (V4 script)
 ppe_magsize = { -- is there an easier way to get the magsize?
@@ -696,15 +715,20 @@ callbacks.Register "DrawESP", "playerlist.extensions.PPE.DrawESP", (builder) ->
     player = builder\GetEntity!
     if not player\IsPlayer! then return
     
-    -- hard to figure this shit out without wiki :/
     set = plist.GetByIndex( player\GetIndex! )
     if set.get "esp.box"
         draw.Color unpack set.get "esp.box.clr"
         draw.OutlinedRect builder\GetRect!
     if set.get "esp.name"
+        builder\Color unpack set.get "esp.name.clr"
         builder\AddTextTop player\GetName!
     if set.get "esp.healthbar"
-        builder\AddBarLeft player\GetHealth! / 100, player\GetHealth!
+        p = player\GetHealth! / player\GetMaxHealth!
+        if set.get"esp.healthbar.clr"[ 4 ] == 0x00
+            builder\Color 0xFF - 0xFF * p, 0xFF * p, 0x00, 0xFF
+        else
+            builder\Color unpack set.get "esp.healthbar.clr"
+        builder\AddBarLeft p, player\GetHealth!
     if set.get "esp.ammo"
         weapon = player\GetPropEntity "m_hActiveWeapon"
         if weapon
@@ -713,9 +737,10 @@ callbacks.Register "DrawESP", "playerlist.extensions.PPE.DrawESP", (builder) ->
                 if ppe_magsize[ tostring weapon ] == nil
                     print "[Player List] [WARNING] Unknow weapon: #{weapon}"
                     ppe_magsize[ tostring weapon ] = ammoClip
+                builder\Color unpack set.get "esp.ammo.clr"
                 builder\AddBarBottom ammoClip / ppe_magsize[ tostring weapon ], ammoClip
 
--- credits to Zerdos for the chams code, a bit hard to do without wiki
+-- credits to Zerdos for the chams code
 ppe_chams_materials = {}
 ppe_chams_GetMat = (color, visible) ->
     name = color[ 1 ] + color[ 2 ] * 256 + color[ 3 ] * 65536 + color[ 4 ] * 16777216 + visible * 4294967296
@@ -744,6 +769,21 @@ callbacks.Register "DrawModel", "playerlist.extensions.PPE.DrawModel", (builder)
             builder\DrawExtraPass!
         if set.get"esp.chams.visclr"[ 4 ] > 0
             builder\ForcedMaterialOverride ppe_chams_GetMat set.get"esp.chams.visclr", 0
+
+-- reveal on radar extension (ror)
+with plist.gui.Checkbox "reveal_on_radar", "Reveal on Radar", false
+    \SetDescription "Reveal player on radar."
+
+-- isnt really pasted, but before someone complains
+-- credits to https://aimware.net/forum/thread/88645
+callbacks.Register "CreateMove", "playerlist.extensions.ROR.CreateMove", (usercmd) ->
+    lp = entities.GetLocalPlayer!
+    for player in *entities.FindByClass"CCSPlayer"
+        if not player\IsAlive!
+            continue
+			
+		set = plist.GetByIndex player\GetIndex!
+        player\SetProp "m_bSpotted", set.get "reveal_on_radar" and 1 or 0
 
 -- removed by `build.py` to prevent crashes
 return "__REMOVE_ME__"
