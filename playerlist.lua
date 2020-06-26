@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.3-pre0"
+local __version__ = "1.2.3-pre1"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)

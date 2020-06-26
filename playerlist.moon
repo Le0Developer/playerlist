@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.3-pre1"
+__version__ = "1.2.3"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -573,8 +573,8 @@ callbacks.Register "CreateMove", "playerlist.extensions.Priority.CreateMove", (c
 				if priority_friendly_affected[ uid ] -- reset team number
 					player\SetProp "m_iTeamNum",  player\GetProp "m_iPendingTeamNum" -- `m_iPendingTeamNum`, seems to work for resetting
 					priority_friendly_affected[ uid ] = nil
-				-- if we arent targetting anyone
-				if not priority_targetting_priority and player\GetTeamNumber! != localplayer\GetTeamNumber!
+				-- if we arent targetting anyone and check if ragebot is enabled - dont want to mess legitbot up
+				if not priority_targetting_priority and player\GetTeamNumber! != localplayer\GetTeamNumber! and gui.GetValue"rbot.master"
 					-- pasted code from Zarkos & converted to moonscript
 
 					lp_pos = localplayer\GetAbsOrigin! + localplayer\GetPropVector "localdata", "m_vecViewOffset[0]"
@@ -710,7 +710,7 @@ ppe_magsize = { -- is there an easier way to get the magsize?
     -- rifles
     weapon_ak47: 30, weapon_aug: 30, weapon_famas: 25, weapon_galilar: 35, weapon_m4a1_silencer: 25, weapon_m4a1: 30, weapon_sg556: 30
     -- snipers
-    weapon_ssg08: 10, weapon_scar20: 20, weapon_gs3sg1: 20, weapon_awp: 10
+    weapon_ssg08: 10, weapon_scar20: 20, weapon_g3sg1: 20, weapon_awp: 10
     -- zeus
     weapon_taser: 1
 }
