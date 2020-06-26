@@ -715,18 +715,20 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
     return 
   end
   local set = plist.GetByIndex(entity:GetIndex())
+  local resolver_toggle = false
   if set.get("resolver.type") == 0 then
     if entity:GetPropVector("m_angEyeAngles").x >= 85 then
-      return gui.SetValue("rbot.accuracy.posadj.resolver", true)
+      resolver_toggle = true
     elseif math.abs((entity:GetProp("m_flLowerBodyYawTarget") - entity:GetProp("m_angEyeAngles").y + 180) % 360 - 180) > 29 then
-      return gui.SetValue("rbot.accuracy.posadj.resolver", true)
-    else
-      return gui.SetValue("rbot.accuracy.posadj.resolver", false)
+      resolver_toggle = true
     end
   elseif set.get("resolver.type") == 1 then
-    return gui.SetValue("rbot.accuracy.posadj.resolver", true)
+    resolver_toggle = true
+  end
+  if gui.GetValue("rbot.master") then
+    return gui.SetValue("rbot.accuracy.posadj.resolver", resolver_toggle)
   else
-    return gui.SetValue("rbot.accuracy.posadj.resolver", false)
+    return gui.SetValue("lbot.posadj.resolver", resolver_toggle)
   end
 end)
 callbacks.Register("CreateMove", "playerlist.extensions.Resolver.CreateMove", function(cmd)
@@ -803,11 +805,14 @@ callbacks.Register("CreateMove", "playerlist.extensions.Priority.CreateMove", fu
           if not priority_targetting_priority and player:GetTeamNumber() ~= localplayer:GetTeamNumber() then
             local lp_pos = localplayer:GetAbsOrigin() + localplayer:GetPropVector("localdata", "m_vecViewOffset[0]")
             local t_pos = player:GetHitboxPosition(5)
-            engine.SetViewAngles((t_pos - lp_pos):Angles())
-            gui.SetValue("rbot.aim.target.fov", priority_lock_fov)
-            gui.SetValue("rbot.aim.target.lock", true)
-            priority_targetted_entity = player
-            priority_targetting_priority = true
+            local trace = engine.TraceLine(lp_pos, t_pos, 0xFFFFFFFF)
+            if trace.entity:IsPlayer() then
+              engine.SetViewAngles((t_pos - lp_pos):Angles())
+              gui.SetValue("rbot.aim.target.fov", priority_lock_fov)
+              gui.SetValue("rbot.aim.target.lock", true)
+              priority_targetted_entity = player
+              priority_targetting_priority = true
+            end
           end
         end
       end

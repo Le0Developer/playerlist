@@ -64,10 +64,12 @@
   - Fixed bug with function in gui objects returned by `plist.gui.X` not starting with `Set`
   - Fixed ammo esp with zeus
 
-## Version 1.2.3-pre0
+## Version 1.2.3-pre1
   - Added better error messages for `plist.GetByUserID` and `plist.GetByIndex`
   - Added colors to: `name esp`, `healthbar esp`(0 alpha means healthbased), `ammo esp`
   - `healthbar esp` is now compatible with servers with variable health
   - Added reveal on radar
   - Fixed bug with binding window to a key and pressing the key in tab mode
   - Added Automatic resolver (toggles on and off depending on pitch and lby)
+  - Resolver now works with legit bot
+  - Fixed issue with locking on unhitable priority players

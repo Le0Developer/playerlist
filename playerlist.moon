@@ -1,6 +1,6 @@
 
 __author__ = "LeoDeveloper"
-__version__ = "1.2.3-pre0"
+__version__ = "1.2.3-pre1"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -507,17 +507,18 @@ with plist.gui.Slider "resolver.lby_override", "LBY Override Value", 0, -58, 58
 callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", (entity) ->
     if not entity\GetIndex! then return
     set = plist.GetByIndex entity\GetIndex!
+    resolver_toggle = false
     if set.get"resolver.type" == 0
         if entity\GetPropVector"m_angEyeAngles".x >= 85 -- check if enemy is looking down
-            gui.SetValue "rbot.accuracy.posadj.resolver", true
+            resolver_toggle = true
         elseif math.abs( (entity\GetProp"m_flLowerBodyYawTarget" - entity\GetProp"m_angEyeAngles".y + 180) % 360 - 180 ) > 29 -- check if lby delta is a bit too high
-            gui.SetValue "rbot.accuracy.posadj.resolver", true
-        else
-            gui.SetValue "rbot.accuracy.posadj.resolver", false
+            resolver_toggle = true
     elseif set.get"resolver.type" == 1
-        gui.SetValue "rbot.accuracy.posadj.resolver", true
+        resolver_toggle = true
+    if gui.GetValue "rbot.master"
+        gui.SetValue "rbot.accuracy.posadj.resolver", resolver_toggle
     else
-        gui.SetValue "rbot.accuracy.posadj.resolver", false
+        gui.SetValue "lbot.posadj.resolver", resolver_toggle
 
 callbacks.Register "CreateMove", "playerlist.extensions.Resolver.CreateMove", (cmd) ->
     for player in *entities.FindByClass"CCSPlayer"
@@ -575,17 +576,19 @@ callbacks.Register "CreateMove", "playerlist.extensions.Priority.CreateMove", (c
 				-- if we arent targetting anyone
 				if not priority_targetting_priority and player\GetTeamNumber! != localplayer\GetTeamNumber!
 					-- pasted code from Zarkos & converted to moonscript
-					
+
 					lp_pos = localplayer\GetAbsOrigin! + localplayer\GetPropVector "localdata", "m_vecViewOffset[0]"
 					t_pos = player\GetHitboxPosition 5
 
-					engine.SetViewAngles (t_pos - lp_pos)\Angles!
-					gui.SetValue "rbot.aim.target.fov", priority_lock_fov
-					gui.SetValue "rbot.aim.target.lock", true
-					priority_targetted_entity = player
-					priority_targetting_priority = true
+                    trace = engine.TraceLine lp_pos, t_pos, 0xFFFFFFFF
+                    if trace.entity\IsPlayer!
+                        engine.SetViewAngles (t_pos - lp_pos)\Angles!
+                        gui.SetValue "rbot.aim.target.fov", priority_lock_fov
+                        gui.SetValue "rbot.aim.target.lock", true
+                        priority_targetted_entity = player
+                        priority_targetting_priority = true
 					
-					--print("priority targetting", player)
+    					--print("priority targetting", player)
 
 callbacks.Register "FireGameEvent", "playerlist.extensions.Priority.FireGameEvent", (event) ->
 	-- we have to reset FOV and stuff after they die
