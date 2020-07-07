@@ -1,5 +1,5 @@
 local __author__ = "LeoDeveloper"
-local __version__ = "1.2.3-pre1"
+local __version__ = "1.2.3"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -802,7 +802,7 @@ callbacks.Register("CreateMove", "playerlist.extensions.Priority.CreateMove", fu
             player:SetProp("m_iTeamNum", player:GetProp("m_iPendingTeamNum"))
             priority_friendly_affected[uid] = nil
           end
-          if not priority_targetting_priority and player:GetTeamNumber() ~= localplayer:GetTeamNumber() then
+          if not priority_targetting_priority and player:GetTeamNumber() ~= localplayer:GetTeamNumber() and gui.GetValue("rbot.master") then
             local lp_pos = localplayer:GetAbsOrigin() + localplayer:GetPropVector("localdata", "m_vecViewOffset[0]")
             local t_pos = player:GetHitboxPosition(5)
             local trace = engine.TraceLine(lp_pos, t_pos, 0xFFFFFFFF)
@@ -1046,7 +1046,7 @@ local ppe_magsize = {
   weapon_sg556 = 30,
   weapon_ssg08 = 10,
   weapon_scar20 = 20,
-  weapon_gs3sg1 = 20,
+  weapon_g3sg1 = 20,
   weapon_awp = 10,
   weapon_taser = 1
 }
