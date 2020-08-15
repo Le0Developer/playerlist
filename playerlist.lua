@@ -703,7 +703,7 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   end
 end)
 do
-  local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "Automatic", "On", "Off", "Manual (LBY Override)")
+  local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "Automatic", "On", "Off")
   _with_0:SetDescription("Choose a resolver for this player.")
 end
 do
@@ -719,7 +719,7 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
   if set.get("resolver.type") == 0 then
     if entity:GetPropVector("m_angEyeAngles").x >= 85 then
       resolver_toggle = true
-    elseif math.abs((entity:GetProp("m_flLowerBodyYawTarget") - entity:GetProp("m_angEyeAngles").y + 180) % 360 - 180) > 29 then
+    elseif entity:GetPropFloat("m_flPoseParameter", 11) > 29 then
       resolver_toggle = true
     end
   elseif set.get("resolver.type") == 1 then
@@ -729,27 +729,6 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
     return gui.SetValue("rbot.accuracy.posadj.resolver", resolver_toggle)
   else
     return gui.SetValue("lbot.posadj.resolver", resolver_toggle)
-  end
-end)
-callbacks.Register("CreateMove", "playerlist.extensions.Resolver.CreateMove", function(cmd)
-  local _list_0 = entities.FindByClass("CCSPlayer")
-  for _index_0 = 1, #_list_0 do
-    local _continue_0 = false
-    repeat
-      local player = _list_0[_index_0]
-      if not player:IsAlive() then
-        _continue_0 = true
-        break
-      end
-      local set = plist.GetByIndex(player:GetIndex())
-      if set.get("resolver.type") == 3 then
-        player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles").y + set.get("resolver.lby_override") + 180) % 360 - 180)
-      end
-      _continue_0 = true
-    until true
-    if not _continue_0 then
-      break
-    end
   end
 end)
 local priority_targetted_entity = nil

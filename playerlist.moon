@@ -498,7 +498,7 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
         GUI_SET\SetPosY GUI_SET_POS.y
 
 -- resolver extension
-with plist.gui.Combobox "resolver.type", "Resolver", "Automatic", "On", "Off", "Manual (LBY Override)"
+with plist.gui.Combobox "resolver.type", "Resolver", "Automatic", "On", "Off"
     \SetDescription "Choose a resolver for this player."
 with plist.gui.Slider "resolver.lby_override", "LBY Override Value", 0, -58, 58
     \SetDescription "The LBY value for resolving when using manual resolver."
@@ -511,7 +511,7 @@ callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
     if set.get"resolver.type" == 0
         if entity\GetPropVector"m_angEyeAngles".x >= 85 -- check if enemy is looking down
             resolver_toggle = true
-        elseif math.abs( (entity\GetProp"m_flLowerBodyYawTarget" - entity\GetProp"m_angEyeAngles".y + 180) % 360 - 180 ) > 29 -- check if lby delta is a bit too high
+        elseif entity\GetPropFloat("m_flPoseParameter", 11) > 29 -- check if lby delta is a bit too high
             resolver_toggle = true
     elseif set.get"resolver.type" == 1
         resolver_toggle = true
@@ -519,15 +519,6 @@ callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
         gui.SetValue "rbot.accuracy.posadj.resolver", resolver_toggle
     else
         gui.SetValue "lbot.posadj.resolver", resolver_toggle
-
-callbacks.Register "CreateMove", "playerlist.extensions.Resolver.CreateMove", (cmd) ->
-    for player in *entities.FindByClass"CCSPlayer"
-        if not player\IsAlive!
-            continue
-        
-        set = plist.GetByIndex player\GetIndex!
-        if set.get"resolver.type" == 3
-            player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"resolver.lby_override" + 180) % 360 - 180
 
 -- player priority extension
 priority_targetted_entity = nil
