@@ -1,6 +1,6 @@
 
-__author__ = "LeoDeveloper"
-__version__ = "1.2.3"
+__version__ = "__VERSION__"
+__human_version__ = "1.3.0"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -455,19 +455,19 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
 -- updater
-http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/version", (content) ->
+http.Get "__VERSION_URL__", (content) ->
     if not content then return
     if content == __version__ then return
     -- update, yay!
     UPD_HEIGHT = 180
     UPDATE = gui.Groupbox GUI_TAB, "Update Available", GUI_TAB_CTRL_POS.x, GUI_TAB_CTRL_POS.y + GUI_TAB_CTRL_POS.h, 618, UPD_HEIGHT
-    text = gui.Text UPDATE, "Current version: #{__version__}\nLatest version: #{content}"
+    text = gui.Text UPDATE, "A new update has been spotted. You are using #{__human_version__}"
     minified = gui.Checkbox UPDATE, "updater.minified", "Download minified version", true
     local btn
     btn = with gui.Button UPDATE, "Update", ->
             text\SetText "Updating..."
             btn\SetDisabled true -- disable update button
-            http.Get (if minified\GetValue! then "https://raw.githubusercontent.com/Le0Developer/playerlist/master/playerlist_minified.lua" else "https://raw.githubusercontent.com/Le0Developer/playerlist/master/playerlist.lua"), (luacode) ->
+            http.Get (if minified\GetValue! then "__VERSION_LUA_MIN__" else "__VERSION_LUA__"), (luacode) ->
                 if luacode
                     text\SetText "Saving..."
                     with file.Open GetScriptName!, "w"
@@ -480,12 +480,7 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
             return "__REMOVE_ME__"
         \SetWidth 290
     with gui.Button UPDATE, "Open Changelog in Browser", ->
-            sanitized_version = ""
-            allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
-            allowed = {allowed\sub(cno, cno), true for cno=1, #allowed}
-            for cno=1, #content
-                if allowed[ content\sub cno, cno ] then sanitized_version ..= content\sub cno, cno
-            panorama.RunScript "SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md#version-" .. sanitized_version .. "' );"
+            panorama.RunScript "SteamOverlayAPI.OpenExternalBrowserURL('https://github.com/Le0Developer/awluas/blob/master/playerlist/changelog.md');"
         \SetWidth 290
         \SetPosX 300
         \SetPosY 78
@@ -739,13 +734,13 @@ ppe_chams_GetMat = (color, visible) ->
     if ppe_chams_materials[ name ]
         return ppe_chams_materials[ name ]
 
-    vmt = [[
+    vmt = '
         "VertexLitGeneric" {
         "$basetexture" "vgui/white_additive"
         "$color" "[%s %s %s]"
         "$alpha" "%s"
         "$ignorez" "%s"
-    }]]\format color[ 1 ] / 255, color[ 2 ] / 255, color[ 3 ] / 255, color[ 4 ] / 255, visible
+    }'\format color[ 1 ] / 255, color[ 2 ] / 255, color[ 3 ] / 255, color[ 4 ] / 255, visible
 
     ppe_chams_materials[ name ] = materials.Create "Chams", vmt
     ppe_chams_materials[ name ]
@@ -769,7 +764,6 @@ with plist.gui.Checkbox "reveal_on_radar", "Reveal on Radar", false
 -- isnt really pasted, but before someone complains
 -- credits to https://aimware.net/forum/thread/88645
 callbacks.Register "CreateMove", "playerlist.extensions.ROR.CreateMove", (usercmd) ->
-    lp = entities.GetLocalPlayer!
     for player in *entities.FindByClass"CCSPlayer"
         if not player\IsAlive!
             continue
