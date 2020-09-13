@@ -706,10 +706,6 @@ do
   local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "Automatic", "On", "Off")
   _with_0:SetDescription("Choose a resolver for this player.")
 end
-do
-  local _with_0 = plist.gui.Slider("resolver.lby_override", "LBY Override Value", 0, -58, 58)
-  _with_0:SetDescription("The LBY value for resolving when using manual resolver.")
-end
 callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", function(entity)
   if not entity:GetIndex() then
     return 
@@ -726,7 +722,7 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
     resolver_toggle = true
   end
   if gui.GetValue("rbot.master") then
-    return gui.SetValue("rbot.accuracy.posadj.resolver", resolver_toggle)
+    return gui.SetValue("rbot.accuracy.posadj.resolver", resolver_toggle and 1 or 0)
   else
     return gui.SetValue("lbot.posadj.resolver", resolver_toggle)
   end
