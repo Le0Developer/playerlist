@@ -514,7 +514,7 @@ callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
     elseif set.get"resolver.type" == 1
         resolver_toggle = true
     if gui.GetValue "rbot.master"
-        gui.SetValue "rbot.accuracy.posadj.resolver", resolver_toggle
+        gui.SetValue "rbot.accuracy.posadj.resolver", resolver_toggle and 1 or 0
     else
         gui.SetValue "lbot.posadj.resolver", resolver_toggle
 
