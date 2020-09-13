@@ -1,5 +1,31 @@
-local __author__ = "LeoDeveloper"
-local __version__ = "1.2.3"
+--[[
+MIT License
+
+Copyright (c) 2020 LeoDeveloper
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Github: https://github.com/le0developer/awluas/blob/master/playerlist/playerlist.moon
+Automatically generated and compiled on Sun Sep 13 12:13:28 2020
+]]
+local __version__ = [[de91c464f35aab3adf8fb76c7b159f6dce21c4936c4d6b746fc920d10799f0d7]]
+local __human_version__ = "1.3.0"
 local randomname = ""
 for i = 1, 16 do
   local rand = math.random(1, 16)
@@ -632,7 +658,7 @@ callbacks.Register("CreateMove", "playerlist.callbacks.CreateMove", function(cmd
     end
   end
 end)
-http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/version", function(content)
+http.Get([[https://raw.githubusercontent.com/Le0Developer/awluas/master/playerlist/dist/playerlist.version]], function(content)
   if not content then
     return 
   end
@@ -641,7 +667,7 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   end
   local UPD_HEIGHT = 180
   local UPDATE = gui.Groupbox(GUI_TAB, "Update Available", GUI_TAB_CTRL_POS.x, GUI_TAB_CTRL_POS.y + GUI_TAB_CTRL_POS.h, 618, UPD_HEIGHT)
-  local text = gui.Text(UPDATE, "Current version: " .. tostring(__version__) .. "\nLatest version: " .. tostring(content))
+  local text = gui.Text(UPDATE, "A new update has been spotted. You are using " .. tostring(__human_version__))
   local minified = gui.Checkbox(UPDATE, "updater.minified", "Download minified version", true)
   local btn
   do
@@ -650,9 +676,9 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
       btn:SetDisabled(true)
       http.Get(((function()
         if minified:GetValue() then
-          return "https://raw.githubusercontent.com/Le0Developer/playerlist/master/playerlist_minified.lua"
+          return [[https://raw.githubusercontent.com/Le0Developer/awluas/master/playerlist/dist/playerlist.min.lua]]
         else
-          return "https://raw.githubusercontent.com/Le0Developer/playerlist/master/playerlist.lua"
+          return [[https://raw.githubusercontent.com/Le0Developer/awluas/master/playerlist/dist/playerlist.lua]]
         end
       end)()), function(luacode)
         if luacode then
@@ -675,21 +701,7 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   end
   do
     local _with_0 = gui.Button(UPDATE, "Open Changelog in Browser", function()
-      local sanitized_version = ""
-      local allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
-      do
-        local _tbl_0 = { }
-        for cno = 1, #allowed do
-          _tbl_0[allowed:sub(cno, cno)] = true
-        end
-        allowed = _tbl_0
-      end
-      for cno = 1, #content do
-        if allowed[content:sub(cno, cno)] then
-          sanitized_version = sanitized_version .. content:sub(cno, cno)
-        end
-      end
-      return panorama.RunScript("SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md#version-" .. sanitized_version .. "' );")
+      return panorama.RunScript("SteamOverlayAPI.OpenExternalBrowserURL('https://github.com/Le0Developer/awluas/blob/master/playerlist/changelog.md');")
     end)
     _with_0:SetWidth(290)
     _with_0:SetPosX(300)
@@ -703,12 +715,8 @@ http.Get("https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
   end
 end)
 do
-  local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "Automatic", "On", "Off", "Manual (LBY Override)")
+  local _with_0 = plist.gui.Combobox("resolver.type", "Resolver", "Automatic", "On", "Off")
   _with_0:SetDescription("Choose a resolver for this player.")
-end
-do
-  local _with_0 = plist.gui.Slider("resolver.lby_override", "LBY Override Value", 0, -58, 58)
-  _with_0:SetDescription("The LBY value for resolving when using manual resolver.")
 end
 callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", function(entity)
   if not entity:GetIndex() then
@@ -719,37 +727,16 @@ callbacks.Register("AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
   if set.get("resolver.type") == 0 then
     if entity:GetPropVector("m_angEyeAngles").x >= 85 then
       resolver_toggle = true
-    elseif math.abs((entity:GetProp("m_flLowerBodyYawTarget") - entity:GetProp("m_angEyeAngles").y + 180) % 360 - 180) > 29 then
+    elseif entity:GetPropFloat("m_flPoseParameter", 11) > 29 then
       resolver_toggle = true
     end
   elseif set.get("resolver.type") == 1 then
     resolver_toggle = true
   end
   if gui.GetValue("rbot.master") then
-    return gui.SetValue("rbot.accuracy.posadj.resolver", resolver_toggle)
+    return gui.SetValue("rbot.accuracy.posadj.resolver", resolver_toggle and 1 or 0)
   else
     return gui.SetValue("lbot.posadj.resolver", resolver_toggle)
-  end
-end)
-callbacks.Register("CreateMove", "playerlist.extensions.Resolver.CreateMove", function(cmd)
-  local _list_0 = entities.FindByClass("CCSPlayer")
-  for _index_0 = 1, #_list_0 do
-    local _continue_0 = false
-    repeat
-      local player = _list_0[_index_0]
-      if not player:IsAlive() then
-        _continue_0 = true
-        break
-      end
-      local set = plist.GetByIndex(player:GetIndex())
-      if set.get("resolver.type") == 3 then
-        player:SetProp("m_flLowerBodyYawTarget", (player:GetProp("m_angEyeAngles").y + set.get("resolver.lby_override") + 180) % 360 - 180)
-      end
-      _continue_0 = true
-    until true
-    if not _continue_0 then
-      break
-    end
   end
 end)
 local priority_targetted_entity = nil
@@ -1095,12 +1082,7 @@ ppe_chams_GetMat = function(color, visible)
   if ppe_chams_materials[name] then
     return ppe_chams_materials[name]
   end
-  local vmt = ([[        "VertexLitGeneric" {
-        "$basetexture" "vgui/white_additive"
-        "$color" "[%s %s %s]"
-        "$alpha" "%s"
-        "$ignorez" "%s"
-    }]]):format(color[1] / 255, color[2] / 255, color[3] / 255, color[4] / 255, visible)
+  local vmt = ('\r\n        "VertexLitGeneric" {\r\n        "$basetexture" "vgui/white_additive"\r\n        "$color" "[%s %s %s]"\r\n        "$alpha" "%s"\r\n        "$ignorez" "%s"\r\n    }'):format(color[1] / 255, color[2] / 255, color[3] / 255, color[4] / 255, visible)
   ppe_chams_materials[name] = materials.Create("Chams", vmt)
   return ppe_chams_materials[name]
 end
@@ -1125,7 +1107,6 @@ do
   _with_0:SetDescription("Reveal player on radar.")
 end
 callbacks.Register("CreateMove", "playerlist.extensions.ROR.CreateMove", function(usercmd)
-  local lp = entities.GetLocalPlayer()
   local _list_0 = entities.FindByClass("CCSPlayer")
   for _index_0 = 1, #_list_0 do
     local _continue_0 = false
@@ -1144,4 +1125,3 @@ callbacks.Register("CreateMove", "playerlist.extensions.ROR.CreateMove", functio
     end
   end
 end)
-

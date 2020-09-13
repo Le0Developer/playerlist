@@ -1,6 +1,6 @@
 
-__author__ = "LeoDeveloper"
-__version__ = "1.2.3"
+__version__ = "__VERSION__"
+__human_version__ = "1.3.0"
 
 -- we're using a random name for settings, so they don't get accidently saved in the config
 -- and even if they did, it'll name no impact on the next session
@@ -455,19 +455,19 @@ callbacks.Register "CreateMove", "playerlist.callbacks.CreateMove", (cmd) ->
             GUI_PLIST_LIST\SetOptions unpack ["[" .. teamname( playersettings[ v ].info.team ) .. "] " .. playersettings[ v ].info.nickname for _, v in ipairs playerlist]
 
 -- updater
-http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/version", (content) ->
+http.Get "__VERSION_URL__", (content) ->
     if not content then return
     if content == __version__ then return
     -- update, yay!
     UPD_HEIGHT = 180
     UPDATE = gui.Groupbox GUI_TAB, "Update Available", GUI_TAB_CTRL_POS.x, GUI_TAB_CTRL_POS.y + GUI_TAB_CTRL_POS.h, 618, UPD_HEIGHT
-    text = gui.Text UPDATE, "Current version: #{__version__}\nLatest version: #{content}"
+    text = gui.Text UPDATE, "A new update has been spotted. You are using #{__human_version__}"
     minified = gui.Checkbox UPDATE, "updater.minified", "Download minified version", true
     local btn
     btn = with gui.Button UPDATE, "Update", ->
             text\SetText "Updating..."
             btn\SetDisabled true -- disable update button
-            http.Get (if minified\GetValue! then "https://raw.githubusercontent.com/Le0Developer/playerlist/master/playerlist_minified.lua" else "https://raw.githubusercontent.com/Le0Developer/playerlist/master/playerlist.lua"), (luacode) ->
+            http.Get (if minified\GetValue! then "__VERSION_LUA_MIN__" else "__VERSION_LUA__"), (luacode) ->
                 if luacode
                     text\SetText "Saving..."
                     with file.Open GetScriptName!, "w"
@@ -480,12 +480,7 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
             return "__REMOVE_ME__"
         \SetWidth 290
     with gui.Button UPDATE, "Open Changelog in Browser", ->
-            sanitized_version = ""
-            allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
-            allowed = {allowed\sub(cno, cno), true for cno=1, #allowed}
-            for cno=1, #content
-                if allowed[ content\sub cno, cno ] then sanitized_version ..= content\sub cno, cno
-            panorama.RunScript "SteamOverlayAPI.OpenExternalBrowserURL( 'https://github.com/Le0Developer/playerlist/blob/master/changelog.md#version-" .. sanitized_version .. "' );"
+            panorama.RunScript "SteamOverlayAPI.OpenExternalBrowserURL('https://github.com/Le0Developer/awluas/blob/master/playerlist/changelog.md');"
         \SetWidth 290
         \SetPosX 300
         \SetPosY 78
@@ -498,10 +493,8 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
         GUI_SET\SetPosY GUI_SET_POS.y
 
 -- resolver extension
-with plist.gui.Combobox "resolver.type", "Resolver", "Automatic", "On", "Off", "Manual (LBY Override)"
+with plist.gui.Combobox "resolver.type", "Resolver", "Automatic", "On", "Off"
     \SetDescription "Choose a resolver for this player."
-with plist.gui.Slider "resolver.lby_override", "LBY Override Value", 0, -58, 58
-    \SetDescription "The LBY value for resolving when using manual resolver."
 
 
 callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", (entity) ->
@@ -511,23 +504,14 @@ callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget"
     if set.get"resolver.type" == 0
         if entity\GetPropVector"m_angEyeAngles".x >= 85 -- check if enemy is looking down
             resolver_toggle = true
-        elseif math.abs( (entity\GetProp"m_flLowerBodyYawTarget" - entity\GetProp"m_angEyeAngles".y + 180) % 360 - 180 ) > 29 -- check if lby delta is a bit too high
+        elseif entity\GetPropFloat("m_flPoseParameter", 11) > 29 -- check if lby delta is a bit too high
             resolver_toggle = true
     elseif set.get"resolver.type" == 1
         resolver_toggle = true
     if gui.GetValue "rbot.master"
-        gui.SetValue "rbot.accuracy.posadj.resolver", resolver_toggle
+        gui.SetValue "rbot.accuracy.posadj.resolver", resolver_toggle and 1 or 0
     else
         gui.SetValue "lbot.posadj.resolver", resolver_toggle
-
-callbacks.Register "CreateMove", "playerlist.extensions.Resolver.CreateMove", (cmd) ->
-    for player in *entities.FindByClass"CCSPlayer"
-        if not player\IsAlive!
-            continue
-        
-        set = plist.GetByIndex player\GetIndex!
-        if set.get"resolver.type" == 3
-            player\SetProp "m_flLowerBodyYawTarget", (player\GetProp"m_angEyeAngles".y + set.get"resolver.lby_override" + 180) % 360 - 180
 
 -- player priority extension
 priority_targetted_entity = nil
@@ -750,13 +734,13 @@ ppe_chams_GetMat = (color, visible) ->
     if ppe_chams_materials[ name ]
         return ppe_chams_materials[ name ]
 
-    vmt = [[
+    vmt = '
         "VertexLitGeneric" {
         "$basetexture" "vgui/white_additive"
         "$color" "[%s %s %s]"
         "$alpha" "%s"
         "$ignorez" "%s"
-    }]]\format color[ 1 ] / 255, color[ 2 ] / 255, color[ 3 ] / 255, color[ 4 ] / 255, visible
+    }'\format color[ 1 ] / 255, color[ 2 ] / 255, color[ 3 ] / 255, color[ 4 ] / 255, visible
 
     ppe_chams_materials[ name ] = materials.Create "Chams", vmt
     ppe_chams_materials[ name ]
@@ -780,7 +764,6 @@ with plist.gui.Checkbox "reveal_on_radar", "Reveal on Radar", false
 -- isnt really pasted, but before someone complains
 -- credits to https://aimware.net/forum/thread/88645
 callbacks.Register "CreateMove", "playerlist.extensions.ROR.CreateMove", (usercmd) ->
-    lp = entities.GetLocalPlayer!
     for player in *entities.FindByClass"CCSPlayer"
         if not player\IsAlive!
             continue
