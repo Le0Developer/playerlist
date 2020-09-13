@@ -500,8 +500,6 @@ http.Get "https://raw.githubusercontent.com/Le0Developer/playerlist/master/versi
 -- resolver extension
 with plist.gui.Combobox "resolver.type", "Resolver", "Automatic", "On", "Off"
     \SetDescription "Choose a resolver for this player."
-with plist.gui.Slider "resolver.lby_override", "LBY Override Value", 0, -58, 58
-    \SetDescription "The LBY value for resolving when using manual resolver."
 
 
 callbacks.Register "AimbotTarget", "playerlist.extensions.Resolver.AimbotTarget", (entity) ->
