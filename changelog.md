@@ -78,4 +78,6 @@
 
 ## Version 1.3.0
   - Removed custom resolver (polak made it impossible)
-  - Fixed legit aa detection for Automatic Resolver
+  - Fixed legit aa detection for Automatic Resolver (still a bit broken, you should enable the resolver manually)
+  - Fixed Automatic Resolver for new Combobox
+  - Changed repository from le0developer/playerlist to le0developer/awluas/playerlist

@@ -1,6 +1,8 @@
 
 # Playerlist
 
+**This project was moved to another [repository](https://github.com/le0developer/awluas/playerlist)**
+
 This is inspired by [PlayerList by Zerdos](https://github.com/zer420/Player-List), the goal of this project is to make playerlist with a public api for expanding the lua.
 
 This project is written in [Moonscript](https://moonscript.org), a language which compiles to lua.
